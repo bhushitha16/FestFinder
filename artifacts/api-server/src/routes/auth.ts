@@ -62,8 +62,6 @@ router.post("/student/signup", async (req, res) => {
   if (!colleges.length) return res.status(400).json({ error: "Invalid or unapproved college selected" });
 
   const passwordHash = hashPassword(password);
-  const verifyToken = generateToken(32);
-  const verifyExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   const [user] = await db.insert(usersTable).values({
     email: collegeEmail,
@@ -71,9 +69,8 @@ router.post("/student/signup", async (req, res) => {
     fullName,
     contactNumber,
     role: "student",
-    status: "pending_verification",
-    emailVerifyToken: verifyToken,
-    emailVerifyExpiry: verifyExpiry,
+    status: "active",
+    emailVerified: true,
   }).returning();
 
   await db.insert(studentProfilesTable).values({
@@ -82,13 +79,8 @@ router.post("/student/signup", async (req, res) => {
     collegeIdNumber,
   });
 
-  // In a real app, send verification email. For now, return the token in dev.
-  const verifyUrl = `${process.env.APP_URL || ""}/api/auth/verify-email?token=${verifyToken}`;
-  console.log(`[DEV] Verify email URL: ${verifyUrl}`);
-
   return res.status(201).json({
-    message: "Registration successful! Please check your college email to verify your account.",
-    verifyUrl: process.env.NODE_ENV !== "production" ? verifyUrl : undefined,
+    message: "Registration successful! You can now log in.",
   });
 });
 

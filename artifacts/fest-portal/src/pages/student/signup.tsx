@@ -34,7 +34,7 @@ export default function StudentSignup() {
       onSuccess: () => {
         toast({ 
           title: "Registration successful!", 
-          description: "Please check your email to verify your account." 
+          description: "Your account is ready. Please log in." 
         });
         setLocation("/student/login");
       },
