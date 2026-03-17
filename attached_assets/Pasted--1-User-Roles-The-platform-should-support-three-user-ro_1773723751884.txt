@@ -1,0 +1,165 @@
+
+
+1. User Roles
+
+The platform should support three user roles:
+
+1️⃣ Student User
+
+Regular students who want to explore and register for events.
+
+2️⃣ College Admin
+
+A representative from a college who manages events and student registrations for that college.
+
+3️⃣ Super Admin
+
+The platform owner (myself) who verifies and approves colleges before they can participate on the platform.
+
+2. Landing Page Design
+
+The first page of the platform should present three login options using clear icons or cards:
+
+🎓 Student Login / Sign Up
+
+🏫 College Admin Login / Sign Up
+
+
+
+3. Student User Flow
+Student Sign-Up Requirements
+
+Students must provide the following information:
+
+Full Name
+
+Contact Number
+
+College Name (select from approved colleges)
+
+College Email ID
+
+College ID Number
+
+Verification Process
+
+After registration, a verification email should be sent to the student's official college email ID.
+
+The student must verify their email before accessing the platform.
+
+Once verified, the student can log in.
+
+Student Dashboard
+
+After login, students should be able to:
+
+View and filter all available events across colleges 
+
+
+
+Register for events
+
+View their registered events
+
+Receive registration status updates (approved/rejected)
+
+4. College Admin Flow
+Admin Sign-Up Requirements
+
+Admins must provide:
+
+Full Name
+
+Official College Email ID
+
+College Name
+
+Contact Number
+
+Designation (optional)
+
+Admin Restrictions
+
+Only one admin account is allowed per college.
+
+If someone tries to register using the same college name but a different email, the system should reject the request.
+
+Admin Verification
+
+After sign-up, the admin request is sent to the Super Admin for approval.
+
+Only after Super Admin approval can the admin access the dashboard.
+
+Admin Dashboard Features
+
+Admins should be able to:
+
+1️⃣ Manage Events
+
+Create events
+
+Edit events
+
+View past events
+
+View upcoming events
+
+2️⃣ Manage Registrations
+
+View student registrations
+
+Accept or reject registrations
+
+Track participant lists
+
+3️⃣ Event Discovery
+Admins should also be able to:
+
+View upcoming events hosted by other colleges
+
+Optionally participate or collaborate
+
+5. Super Admin Flow
+the super admin login should be separate from the organizer ans student login..it should just be a simple ui for the server side
+The Super Admin (platform owner) has the highest privileges.
+
+Super Admin Responsibilities
+
+1️⃣ College Approval
+
+Review admin registration requests
+
+Verify college authenticity
+
+Approve or reject college admin accounts
+
+2️⃣ Platform Management
+Super Admin should be able to:
+
+View all colleges on the platform
+
+View all events across colleges
+
+Manage admin accounts
+
+Suspend or remove colleges if needed
+
+3️⃣ System Monitoring
+
+View total users
+
+View total events
+
+Monitor activity across the platform
+
+6. Database Constraints
+
+Important system rules:
+
+Only one admin per college
+
+Students must register using a valid college email
+
+Colleges must be approved by Super Admin before students can register
+
+Admin approval is required before students participate in events

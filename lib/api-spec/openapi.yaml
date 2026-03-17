@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: College Fest Portal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: colleges
+    description: College management
+  - name: events
+    description: Event management
+  - name: registrations
+    description: Event registrations
+  - name: admin
+    description: Super admin operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +32,616 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/student/signup:
+    post:
+      operationId: studentSignup
+      tags: [auth]
+      summary: Register a new student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentSignupRequest"
+      responses:
+        "201":
+          description: Student registered, verification email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/student/login:
+    post:
+      operationId: studentLogin
+      tags: [auth]
+      summary: Student login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/admin/signup:
+    post:
+      operationId: adminSignup
+      tags: [auth]
+      summary: Register a new college admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSignupRequest"
+      responses:
+        "201":
+          description: Admin request submitted for super admin approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: College already has an admin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/admin/login:
+    post:
+      operationId: adminLogin
+      tags: [auth]
+      summary: College admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials or not approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/superadmin/login:
+    post:
+      operationId: superAdminLogin
+      tags: [auth]
+      summary: Super admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-email:
+    get:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Verify student email
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user info
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfo"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /colleges:
+    get:
+      operationId: listColleges
+      tags: [colleges]
+      summary: List approved colleges
+      responses:
+        "200":
+          description: List of approved colleges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/College"
+
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      summary: List all upcoming events
+      parameters:
+        - name: college_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+    post:
+      operationId: createEvent
+      tags: [events]
+      summary: Create a new event (college admin only)
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "201":
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{eventId}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get event details
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "404":
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateEvent
+      tags: [events]
+      summary: Update an event (college admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "200":
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteEvent
+      tags: [events]
+      summary: Delete an event (college admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Event deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{eventId}/register:
+    post:
+      operationId: registerForEvent
+      tags: [registrations]
+      summary: Register for an event (student only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Registration submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+        "400":
+          description: Already registered or event full
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/events:
+    get:
+      operationId: getAdminEvents
+      tags: [events]
+      summary: Get events managed by the logged-in college admin
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Admin's events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+  /admin/events/{eventId}/registrations:
+    get:
+      operationId: getEventRegistrations
+      tags: [registrations]
+      summary: Get registrations for an event (college admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of registrations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Registration"
+
+  /admin/registrations/{registrationId}/status:
+    put:
+      operationId: updateRegistrationStatus
+      tags: [registrations]
+      summary: Approve or reject a registration (college admin only)
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatusRequest"
+      responses:
+        "200":
+          description: Registration status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+
+  /student/registrations:
+    get:
+      operationId: getStudentRegistrations
+      tags: [registrations]
+      summary: Get current student's registrations
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Student's registrations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Registration"
+
+  /superadmin/admins/pending:
+    get:
+      operationId: getPendingAdmins
+      tags: [admin]
+      summary: Get pending college admin requests
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Pending admin requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+
+  /superadmin/admins/{adminId}/approve:
+    put:
+      operationId: approveAdmin
+      tags: [admin]
+      summary: Approve a college admin
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Admin approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /superadmin/admins/{adminId}/reject:
+    put:
+      operationId: rejectAdmin
+      tags: [admin]
+      summary: Reject a college admin
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Admin rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /superadmin/admins/{adminId}/suspend:
+    put:
+      operationId: suspendAdmin
+      tags: [admin]
+      summary: Suspend a college admin
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Admin suspended
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /superadmin/stats:
+    get:
+      operationId: getPlatformStats
+      tags: [admin]
+      summary: Get platform-wide statistics
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Platform statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformStats"
+
+  /superadmin/colleges:
+    get:
+      operationId: getAllColleges
+      tags: [admin]
+      summary: Get all colleges on the platform
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: All colleges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/College"
+
+  /superadmin/events:
+    get:
+      operationId: getAllEvents
+      tags: [admin]
+      summary: Get all events on the platform
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: All events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
 components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +651,304 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserInfo"
+      required:
+        - message
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [student, college_admin, super_admin]
+        status:
+          type: string
+        collegeId:
+          type: integer
+          nullable: true
+        collegeName:
+          type: string
+          nullable: true
+      required:
+        - id
+        - email
+        - name
+        - role
+        - status
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    StudentSignupRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        contactNumber:
+          type: string
+        collegeId:
+          type: integer
+        collegeEmail:
+          type: string
+          format: email
+        collegeIdNumber:
+          type: string
+        password:
+          type: string
+      required:
+        - fullName
+        - contactNumber
+        - collegeId
+        - collegeEmail
+        - collegeIdNumber
+        - password
+
+    AdminSignupRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        collegeName:
+          type: string
+        contactNumber:
+          type: string
+        designation:
+          type: string
+        password:
+          type: string
+      required:
+        - fullName
+        - email
+        - collegeName
+        - contactNumber
+        - password
+
+    College:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended]
+        adminName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - status
+        - createdAt
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        venue:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        registrationDeadline:
+          type: string
+          format: date-time
+        maxParticipants:
+          type: integer
+          nullable: true
+        registeredCount:
+          type: integer
+        collegeId:
+          type: integer
+        collegeName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - description
+        - category
+        - venue
+        - eventDate
+        - registrationDeadline
+        - collegeId
+        - collegeName
+        - registeredCount
+        - createdAt
+
+    CreateEventRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        venue:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        registrationDeadline:
+          type: string
+          format: date-time
+        maxParticipants:
+          type: integer
+          nullable: true
+      required:
+        - title
+        - description
+        - category
+        - venue
+        - eventDate
+        - registrationDeadline
+
+    Registration:
+      type: object
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        eventTitle:
+          type: string
+        studentId:
+          type: integer
+        studentName:
+          type: string
+        studentEmail:
+          type: string
+        studentCollegeIdNumber:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        registeredAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - eventId
+        - eventTitle
+        - studentId
+        - studentName
+        - studentEmail
+        - studentCollegeIdNumber
+        - status
+        - registeredAt
+
+    UpdateStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+      required:
+        - status
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        collegeName:
+          type: string
+        contactNumber:
+          type: string
+        designation:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, approved, rejected, suspended]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - collegeName
+        - contactNumber
+        - status
+        - createdAt
+
+    PlatformStats:
+      type: object
+      properties:
+        totalStudents:
+          type: integer
+        totalColleges:
+          type: integer
+        totalEvents:
+          type: integer
+        totalRegistrations:
+          type: integer
+        pendingAdminRequests:
+          type: integer
+      required:
+        - totalStudents
+        - totalColleges
+        - totalEvents
+        - totalRegistrations
+        - pendingAdminRequests

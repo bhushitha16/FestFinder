@@ -1,0 +1,20 @@
+packages:
+  "framer-motion": "For premium smooth page transitions and micro-interactions"
+  "react-hook-form": "For robust form state management"
+  "@hookform/resolvers": "For Zod validation integration with forms"
+  "date-fns": "For formatting event dates and deadlines elegantly"
+  "lucide-react": "For beautiful consistent iconography"
+  "zod": "For defining frontend form validation schemas"
+
+images:
+  - path: "artifacts/fest-portal/public/images/hero-bg.png"
+    description: "Abstract luxurious dark background with elegant flowing gold geometric lines and subtle glowing particles, deep black and metallic gold, 8k resolution, premium cinematic lighting"
+    aspect_ratio: "16:9"
+  - path: "artifacts/fest-portal/public/images/logo.png"
+    description: "Minimalist luxury crest logo combining a graduation cap and a star in metallic gold on a pure black background, elegant sophisticated vector art"
+    aspect_ratio: "1:1"
+
+notes:
+  - Using generated Orval hooks from @workspace/api-client-react
+  - Implementing a dark luxury theme with black and gold as requested
+  - Using React Context for global auth state derived from useGetMe hook
