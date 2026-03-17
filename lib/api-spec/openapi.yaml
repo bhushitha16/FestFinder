@@ -8,17 +8,14 @@ servers:
     description: Base API path
 tags:
   - name: health
-    description: Health operations
   - name: auth
-    description: Authentication operations
   - name: colleges
-    description: College management
   - name: events
-    description: Event management
   - name: registrations
-    description: Event registrations
   - name: admin
-    description: Super admin operations
+  - name: bookmarks
+  - name: reviews
+  - name: photos
 paths:
   /healthz:
     get:
@@ -37,7 +34,6 @@ paths:
     post:
       operationId: studentSignup
       tags: [auth]
-      summary: Register a new student
       requestBody:
         required: true
         content:
@@ -46,19 +42,19 @@ paths:
               $ref: "#/components/schemas/StudentSignupRequest"
       responses:
         "201":
-          description: Student registered, verification email sent
+          description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
+                $ref: "#/components/schemas/MessageResponse"
         "400":
-          description: Validation error
+          description: Error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Email already registered
+          description: Conflict
           content:
             application/json:
               schema:
@@ -68,7 +64,6 @@ paths:
     post:
       operationId: studentLogin
       tags: [auth]
-      summary: Student login
       requestBody:
         required: true
         content:
@@ -77,13 +72,13 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: Login successful
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
         "401":
-          description: Invalid credentials
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -93,7 +88,6 @@ paths:
     post:
       operationId: adminSignup
       tags: [auth]
-      summary: Register a new college admin
       requestBody:
         required: true
         content:
@@ -102,19 +96,19 @@ paths:
               $ref: "#/components/schemas/AdminSignupRequest"
       responses:
         "201":
-          description: Admin request submitted for super admin approval
+          description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
+                $ref: "#/components/schemas/MessageResponse"
         "400":
-          description: Validation error
+          description: Error
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: College already has an admin
+          description: Conflict
           content:
             application/json:
               schema:
@@ -124,7 +118,6 @@ paths:
     post:
       operationId: adminLogin
       tags: [auth]
-      summary: College admin login
       requestBody:
         required: true
         content:
@@ -133,13 +126,13 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: Login successful
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
         "401":
-          description: Invalid credentials or not approved
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -149,7 +142,6 @@ paths:
     post:
       operationId: superAdminLogin
       tags: [auth]
-      summary: Super admin login
       requestBody:
         required: true
         content:
@@ -158,13 +150,13 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
       responses:
         "200":
-          description: Login successful
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
         "401":
-          description: Invalid credentials
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -174,7 +166,6 @@ paths:
     get:
       operationId: verifyEmail
       tags: [auth]
-      summary: Verify student email
       parameters:
         - name: token
           in: query
@@ -183,13 +174,13 @@ paths:
             type: string
       responses:
         "200":
-          description: Email verified
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
         "400":
-          description: Invalid or expired token
+          description: Error
           content:
             application/json:
               schema:
@@ -199,12 +190,9 @@ paths:
     get:
       operationId: getMe
       tags: [auth]
-      summary: Get current user info
-      security:
-        - cookieAuth: []
       responses:
         "200":
-          description: Current user info
+          description: OK
           content:
             application/json:
               schema:
@@ -220,23 +208,36 @@ paths:
     post:
       operationId: logout
       tags: [auth]
-      summary: Logout current user
       responses:
         "200":
-          description: Logged out
+          description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/MessageResponse"
 
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [events]
+      summary: List event categories
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
   /colleges:
     get:
       operationId: listColleges
       tags: [colleges]
-      summary: List approved colleges
       responses:
         "200":
-          description: List of approved colleges
+          description: OK
           content:
             application/json:
               schema:
@@ -244,11 +245,34 @@ paths:
                 items:
                   $ref: "#/components/schemas/College"
 
+  /colleges/{collegeId}:
+    get:
+      operationId: getCollege
+      tags: [colleges]
+      parameters:
+        - name: collegeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollegeDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /events:
     get:
       operationId: listEvents
       tags: [events]
-      summary: List all upcoming events
       parameters:
         - name: college_id
           in: query
@@ -265,9 +289,15 @@ paths:
           required: false
           schema:
             type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [upcoming, completed]
       responses:
         "200":
-          description: List of events
+          description: OK
           content:
             application/json:
               schema:
@@ -278,9 +308,6 @@ paths:
     post:
       operationId: createEvent
       tags: [events]
-      summary: Create a new event (college admin only)
-      security:
-        - cookieAuth: []
       requestBody:
         required: true
         content:
@@ -289,7 +316,7 @@ paths:
               $ref: "#/components/schemas/CreateEventRequest"
       responses:
         "201":
-          description: Event created
+          description: Created
           content:
             application/json:
               schema:
@@ -311,7 +338,6 @@ paths:
     get:
       operationId: getEvent
       tags: [events]
-      summary: Get event details
       parameters:
         - name: eventId
           in: path
@@ -320,13 +346,13 @@ paths:
             type: integer
       responses:
         "200":
-          description: Event details
+          description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Event"
+                $ref: "#/components/schemas/EventDetail"
         "404":
-          description: Event not found
+          description: Not found
           content:
             application/json:
               schema:
@@ -335,9 +361,6 @@ paths:
     put:
       operationId: updateEvent
       tags: [events]
-      summary: Update an event (college admin only)
-      security:
-        - cookieAuth: []
       parameters:
         - name: eventId
           in: path
@@ -352,7 +375,7 @@ paths:
               $ref: "#/components/schemas/CreateEventRequest"
       responses:
         "200":
-          description: Event updated
+          description: OK
           content:
             application/json:
               schema:
@@ -367,9 +390,6 @@ paths:
     delete:
       operationId: deleteEvent
       tags: [events]
-      summary: Delete an event (college admin only)
-      security:
-        - cookieAuth: []
       parameters:
         - name: eventId
           in: path
@@ -378,7 +398,7 @@ paths:
             type: integer
       responses:
         "200":
-          description: Event deleted
+          description: OK
           content:
             application/json:
               schema:
@@ -394,9 +414,6 @@ paths:
     post:
       operationId: registerForEvent
       tags: [registrations]
-      summary: Register for an event (student only)
-      security:
-        - cookieAuth: []
       parameters:
         - name: eventId
           in: path
@@ -405,13 +422,13 @@ paths:
             type: integer
       responses:
         "201":
-          description: Registration submitted
+          description: Created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Registration"
         "400":
-          description: Already registered or event full
+          description: Error
           content:
             application/json:
               schema:
@@ -423,16 +440,195 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /events/{eventId}/photos:
+    get:
+      operationId: getEventPhotos
+      tags: [photos]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventPhoto"
+
+    post:
+      operationId: addEventPhoto
+      tags: [photos]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPhotoRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventPhoto"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{eventId}/photos/{photoId}:
+    delete:
+      operationId: deleteEventPhoto
+      tags: [photos]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /events/{eventId}/reviews:
+    get:
+      operationId: getEventReviews
+      tags: [reviews]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+
+    post:
+      operationId: addEventReview
+      tags: [reviews]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddReviewRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "400":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookmarks:
+    get:
+      operationId: getBookmarks
+      tags: [bookmarks]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+  /bookmarks/{eventId}:
+    post:
+      operationId: addBookmark
+      tags: [bookmarks]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: removeBookmark
+      tags: [bookmarks]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
   /admin/events:
     get:
       operationId: getAdminEvents
       tags: [events]
-      summary: Get events managed by the logged-in college admin
-      security:
-        - cookieAuth: []
       responses:
         "200":
-          description: Admin's events
+          description: OK
           content:
             application/json:
               schema:
@@ -444,9 +640,6 @@ paths:
     get:
       operationId: getEventRegistrations
       tags: [registrations]
-      summary: Get registrations for an event (college admin only)
-      security:
-        - cookieAuth: []
       parameters:
         - name: eventId
           in: path
@@ -455,7 +648,7 @@ paths:
             type: integer
       responses:
         "200":
-          description: List of registrations
+          description: OK
           content:
             application/json:
               schema:
@@ -467,9 +660,6 @@ paths:
     put:
       operationId: updateRegistrationStatus
       tags: [registrations]
-      summary: Approve or reject a registration (college admin only)
-      security:
-        - cookieAuth: []
       parameters:
         - name: registrationId
           in: path
@@ -484,7 +674,7 @@ paths:
               $ref: "#/components/schemas/UpdateStatusRequest"
       responses:
         "200":
-          description: Registration status updated
+          description: OK
           content:
             application/json:
               schema:
@@ -494,12 +684,9 @@ paths:
     get:
       operationId: getStudentRegistrations
       tags: [registrations]
-      summary: Get current student's registrations
-      security:
-        - cookieAuth: []
       responses:
         "200":
-          description: Student's registrations
+          description: OK
           content:
             application/json:
               schema:
@@ -511,12 +698,9 @@ paths:
     get:
       operationId: getPendingAdmins
       tags: [admin]
-      summary: Get pending college admin requests
-      security:
-        - cookieAuth: []
       responses:
         "200":
-          description: Pending admin requests
+          description: OK
           content:
             application/json:
               schema:
@@ -528,9 +712,6 @@ paths:
     put:
       operationId: approveAdmin
       tags: [admin]
-      summary: Approve a college admin
-      security:
-        - cookieAuth: []
       parameters:
         - name: adminId
           in: path
@@ -539,7 +720,7 @@ paths:
             type: integer
       responses:
         "200":
-          description: Admin approved
+          description: OK
           content:
             application/json:
               schema:
@@ -549,9 +730,6 @@ paths:
     put:
       operationId: rejectAdmin
       tags: [admin]
-      summary: Reject a college admin
-      security:
-        - cookieAuth: []
       parameters:
         - name: adminId
           in: path
@@ -560,7 +738,7 @@ paths:
             type: integer
       responses:
         "200":
-          description: Admin rejected
+          description: OK
           content:
             application/json:
               schema:
@@ -570,9 +748,6 @@ paths:
     put:
       operationId: suspendAdmin
       tags: [admin]
-      summary: Suspend a college admin
-      security:
-        - cookieAuth: []
       parameters:
         - name: adminId
           in: path
@@ -581,7 +756,7 @@ paths:
             type: integer
       responses:
         "200":
-          description: Admin suspended
+          description: OK
           content:
             application/json:
               schema:
@@ -591,12 +766,9 @@ paths:
     get:
       operationId: getPlatformStats
       tags: [admin]
-      summary: Get platform-wide statistics
-      security:
-        - cookieAuth: []
       responses:
         "200":
-          description: Platform statistics
+          description: OK
           content:
             application/json:
               schema:
@@ -606,12 +778,9 @@ paths:
     get:
       operationId: getAllColleges
       tags: [admin]
-      summary: Get all colleges on the platform
-      security:
-        - cookieAuth: []
       responses:
         "200":
-          description: All colleges
+          description: OK
           content:
             application/json:
               schema:
@@ -623,12 +792,9 @@ paths:
     get:
       operationId: getAllEvents
       tags: [admin]
-      summary: Get all events on the platform
-      security:
-        - cookieAuth: []
       responses:
         "200":
-          description: All events
+          description: OK
           content:
             application/json:
               schema:
@@ -637,37 +803,27 @@ paths:
                   $ref: "#/components/schemas/Event"
 
 components:
-  securitySchemes:
-    cookieAuth:
-      type: apiKey
-      in: cookie
-      name: session
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
     ErrorResponse:
       type: object
       properties:
         error:
           type: string
-        message:
-          type: string
-      required:
-        - error
+      required: [error]
 
     MessageResponse:
       type: object
       properties:
         message:
           type: string
-      required:
-        - message
+      required: [message]
 
     AuthResponse:
       type: object
@@ -676,8 +832,7 @@ components:
           type: string
         user:
           $ref: "#/components/schemas/UserInfo"
-      required:
-        - message
+      required: [message]
 
     UserInfo:
       type: object
@@ -699,12 +854,7 @@ components:
         collegeName:
           type: string
           nullable: true
-      required:
-        - id
-        - email
-        - name
-        - role
-        - status
+      required: [id, email, name, role, status]
 
     LoginRequest:
       type: object
@@ -714,9 +864,7 @@ components:
           format: email
         password:
           type: string
-      required:
-        - email
-        - password
+      required: [email, password]
 
     StudentSignupRequest:
       type: object
@@ -734,13 +882,7 @@ components:
           type: string
         password:
           type: string
-      required:
-        - fullName
-        - contactNumber
-        - collegeId
-        - collegeEmail
-        - collegeIdNumber
-        - password
+      required: [fullName, contactNumber, collegeId, collegeEmail, collegeIdNumber, password]
 
     AdminSignupRequest:
       type: object
@@ -758,12 +900,7 @@ components:
           type: string
         password:
           type: string
-      required:
-        - fullName
-        - email
-        - collegeName
-        - contactNumber
-        - password
+      required: [fullName, email, collegeName, contactNumber, password]
 
     College:
       type: object
@@ -781,11 +918,32 @@ components:
         createdAt:
           type: string
           format: date-time
-      required:
-        - id
-        - name
-        - status
-        - createdAt
+      required: [id, name, status, createdAt]
+
+    CollegeDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+        adminName:
+          type: string
+          nullable: true
+        upcomingEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        pastEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, status, upcomingEvents, pastEvents, createdAt]
 
     Event:
       type: object
@@ -811,25 +969,77 @@ components:
           nullable: true
         registeredCount:
           type: integer
+        thumbnailUrl:
+          type: string
+          nullable: true
+        eventStatus:
+          type: string
+          enum: [upcoming, completed]
         collegeId:
           type: integer
         collegeName:
           type: string
+        averageRating:
+          type: number
+          nullable: true
+        reviewCount:
+          type: integer
         createdAt:
           type: string
           format: date-time
-      required:
-        - id
-        - title
-        - description
-        - category
-        - venue
-        - eventDate
-        - registrationDeadline
-        - collegeId
-        - collegeName
-        - registeredCount
-        - createdAt
+      required: [id, title, description, category, venue, eventDate, registrationDeadline, collegeId, collegeName, registeredCount, eventStatus, reviewCount, createdAt]
+
+    EventDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        venue:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        registrationDeadline:
+          type: string
+          format: date-time
+        maxParticipants:
+          type: integer
+          nullable: true
+        registeredCount:
+          type: integer
+        thumbnailUrl:
+          type: string
+          nullable: true
+        eventStatus:
+          type: string
+          enum: [upcoming, completed]
+        collegeId:
+          type: integer
+        collegeName:
+          type: string
+        averageRating:
+          type: number
+          nullable: true
+        reviewCount:
+          type: integer
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventPhoto"
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, title, description, category, venue, eventDate, registrationDeadline, collegeId, collegeName, registeredCount, eventStatus, reviewCount, photos, reviews, createdAt]
 
     CreateEventRequest:
       type: object
@@ -851,13 +1061,10 @@ components:
         maxParticipants:
           type: integer
           nullable: true
-      required:
-        - title
-        - description
-        - category
-        - venue
-        - eventDate
-        - registrationDeadline
+        thumbnailUrl:
+          type: string
+          nullable: true
+      required: [title, description, category, venue, eventDate, registrationDeadline]
 
     Registration:
       type: object
@@ -882,16 +1089,7 @@ components:
         registeredAt:
           type: string
           format: date-time
-      required:
-        - id
-        - eventId
-        - eventTitle
-        - studentId
-        - studentName
-        - studentEmail
-        - studentCollegeIdNumber
-        - status
-        - registeredAt
+      required: [id, eventId, eventTitle, studentId, studentName, studentEmail, studentCollegeIdNumber, status, registeredAt]
 
     UpdateStatusRequest:
       type: object
@@ -899,8 +1097,7 @@ components:
         status:
           type: string
           enum: [approved, rejected]
-      required:
-        - status
+      required: [status]
 
     AdminUser:
       type: object
@@ -924,14 +1121,7 @@ components:
         createdAt:
           type: string
           format: date-time
-      required:
-        - id
-        - name
-        - email
-        - collegeName
-        - contactNumber
-        - status
-        - createdAt
+      required: [id, name, email, collegeName, contactNumber, status, createdAt]
 
     PlatformStats:
       type: object
@@ -946,9 +1136,62 @@ components:
           type: integer
         pendingAdminRequests:
           type: integer
-      required:
-        - totalStudents
-        - totalColleges
-        - totalEvents
-        - totalRegistrations
-        - pendingAdminRequests
+      required: [totalStudents, totalColleges, totalEvents, totalRegistrations, pendingAdminRequests]
+
+    EventPhoto:
+      type: object
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        photoUrl:
+          type: string
+        caption:
+          type: string
+          nullable: true
+        uploadedAt:
+          type: string
+          format: date-time
+      required: [id, eventId, photoUrl, uploadedAt]
+
+    AddPhotoRequest:
+      type: object
+      properties:
+        photoUrl:
+          type: string
+        caption:
+          type: string
+          nullable: true
+      required: [photoUrl]
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        studentId:
+          type: integer
+        studentName:
+          type: string
+        rating:
+          type: integer
+        review:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, eventId, studentId, studentName, rating, createdAt]
+
+    AddReviewRequest:
+      type: object
+      properties:
+        rating:
+          type: integer
+        review:
+          type: string
+          nullable: true
+      required: [rating]

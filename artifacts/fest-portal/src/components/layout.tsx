@@ -1,8 +1,9 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { motion } from "framer-motion";
-import { LogOut, User, Menu, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { LogOut, User, Menu, X, Crown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
@@ -40,20 +41,18 @@ export function Navbar() {
               <>
                 <Link 
                   href={getDashboardLink()}
-                  className={`text-sm font-medium transition-colors hover:text-primary ${
-                    location.includes("dashboard") ? "text-primary" : "text-muted-foreground"
-                  }`}
+                  className={cn("text-sm font-medium transition-colors hover:text-primary", location.includes("dashboard") ? "text-primary" : "text-muted-foreground")}
                 >
                   Dashboard
                 </Link>
                 <div className="flex items-center gap-4 pl-6 border-l border-white/10">
-                  <div className="flex items-center gap-2 text-sm text-foreground">
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center border border-primary/20">
-                      <User className="w-4 h-4 text-primary" />
+                  <div className="flex items-center gap-3 text-sm text-foreground bg-secondary/50 py-1.5 px-3 rounded-full border border-white/5">
+                    <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                      {user?.role === 'super_admin' ? <Crown className="w-3.5 h-3.5 text-primary" /> : <User className="w-3.5 h-3.5 text-primary" />}
                     </div>
-                    <div className="flex flex-col leading-none">
-                      <span className="font-semibold">{user?.name}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{user?.role?.replace('_', ' ')}</span>
+                    <div className="flex flex-col leading-none mr-1">
+                      <span className="font-semibold text-xs">{user?.name}</span>
+                      <span className="text-[9px] text-primary/80 uppercase tracking-wider">{user?.role?.replace('_', ' ')}</span>
                     </div>
                   </div>
                   <button 
@@ -66,11 +65,11 @@ export function Navbar() {
                 </div>
               </>
             ) : (
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-6">
                 <Link href="/student/login" className="text-sm font-medium text-muted-foreground hover:text-white transition-colors">
                   Student Portal
                 </Link>
-                <Link href="/admin/login" className="text-sm font-medium px-4 py-2 rounded-md bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all duration-300">
+                <Link href="/admin/login" className="text-sm font-medium px-5 py-2 rounded-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all duration-300">
                   College Admin
                 </Link>
               </div>
@@ -81,7 +80,7 @@ export function Navbar() {
           <div className="md:hidden flex items-center">
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-foreground p-2"
+              className="text-foreground p-2 hover:bg-white/5 rounded-md"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -90,37 +89,44 @@ export function Navbar() {
       </div>
 
       {/* Mobile Nav */}
-      {isMobileMenuOpen && (
-        <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="md:hidden bg-card border-b border-white/5 px-4 pt-2 pb-6 space-y-4"
-        >
-          {isAuthenticated ? (
-            <>
-              <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-lg">
-                <User className="w-5 h-5 text-primary" />
-                <div className="flex flex-col">
-                  <span className="font-medium text-sm">{user?.name}</span>
-                  <span className="text-xs text-muted-foreground capitalize">{user?.role?.replace('_', ' ')}</span>
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="md:hidden bg-card border-b border-white/5 overflow-hidden"
+          >
+            <div className="px-4 py-6 space-y-4">
+              {isAuthenticated ? (
+                <>
+                  <div className="flex items-center gap-3 p-4 bg-secondary/50 rounded-xl border border-white/5">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                      <User className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{user?.name}</span>
+                      <span className="text-xs text-primary/80 uppercase tracking-wider">{user?.role?.replace('_', ' ')}</span>
+                    </div>
+                  </div>
+                  <Link href={getDashboardLink()} className="block px-4 py-3 text-sm font-medium bg-white/5 rounded-lg text-foreground hover:text-primary">Dashboard</Link>
+                  <button 
+                    onClick={() => logout()}
+                    className="w-full text-left px-4 py-3 text-sm font-medium text-destructive bg-destructive/10 hover:bg-destructive/20 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" /> Sign Out
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <Link href="/student/login" className="px-4 py-3 text-sm font-medium bg-secondary border border-white/10 rounded-lg text-center hover:bg-white/5 transition-colors">Student Login</Link>
+                  <Link href="/admin/login" className="px-4 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg text-center shadow-[0_0_15px_-3px_hsl(var(--primary)/0.4)]">College Admin Login</Link>
                 </div>
-              </div>
-              <Link href={getDashboardLink()} className="block px-4 py-2 text-sm text-foreground hover:text-primary">Dashboard</Link>
-              <button 
-                onClick={() => logout()}
-                className="w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md flex items-center gap-2"
-              >
-                <LogOut className="w-4 h-4" /> Logout
-              </button>
-            </>
-          ) : (
-            <div className="flex flex-col gap-2 pt-2">
-              <Link href="/student/login" className="px-4 py-3 text-sm font-medium bg-secondary rounded-md text-center">Student Login</Link>
-              <Link href="/admin/login" className="px-4 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-md text-center">College Admin Login</Link>
+              )}
             </div>
-          )}
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }
@@ -132,11 +138,17 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col relative z-10">
         {children}
       </main>
-      <footer className="border-t border-white/5 py-8 mt-auto z-10 bg-background/80">
-        <div className="max-w-7xl mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} Lumina Fests. Elevating College Experiences.</p>
-          <div className="mt-4 flex justify-center gap-4">
-            <Link href="/superadmin/login" className="text-xs opacity-50 hover:opacity-100 transition-opacity hover:text-primary">Platform Administration</Link>
+      <footer className="border-t border-white/5 py-12 mt-auto z-10 bg-background/80 backdrop-blur-lg">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <Link href="/">
+            <div className="flex items-center justify-center gap-2 mb-6 opacity-50 hover:opacity-100 transition-opacity">
+              <img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="Logo" className="w-6 h-6 grayscale brightness-200" />
+              <span className="font-display font-bold tracking-widest text-white">LUMINA</span>
+            </div>
+          </Link>
+          <p className="text-sm text-muted-foreground/80">© {new Date().getFullYear()} Lumina Fests. The Premier Network for College Experiences.</p>
+          <div className="mt-8 flex justify-center">
+            <Link href="/superadmin/login" className="text-xs text-muted-foreground/30 hover:text-primary transition-colors uppercase tracking-widest">Platform Administration</Link>
           </div>
         </div>
       </footer>

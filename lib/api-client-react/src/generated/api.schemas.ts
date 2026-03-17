@@ -11,7 +11,6 @@ export interface HealthStatus {
 
 export interface ErrorResponse {
   error: string;
-  message?: string;
 }
 
 export interface MessageResponse {
@@ -79,6 +78,14 @@ export interface College {
   createdAt: string;
 }
 
+export type EventEventStatus =
+  (typeof EventEventStatus)[keyof typeof EventEventStatus];
+
+export const EventEventStatus = {
+  upcoming: "upcoming",
+  completed: "completed",
+} as const;
+
 export interface Event {
   id: number;
   title: string;
@@ -89,8 +96,69 @@ export interface Event {
   registrationDeadline: string;
   maxParticipants?: number | null;
   registeredCount: number;
+  thumbnailUrl?: string | null;
+  eventStatus: EventEventStatus;
   collegeId: number;
   collegeName: string;
+  averageRating?: number | null;
+  reviewCount: number;
+  createdAt: string;
+}
+
+export interface CollegeDetail {
+  id: number;
+  name: string;
+  status: string;
+  adminName?: string | null;
+  upcomingEvents: Event[];
+  pastEvents: Event[];
+  createdAt: string;
+}
+
+export type EventDetailEventStatus =
+  (typeof EventDetailEventStatus)[keyof typeof EventDetailEventStatus];
+
+export const EventDetailEventStatus = {
+  upcoming: "upcoming",
+  completed: "completed",
+} as const;
+
+export interface EventPhoto {
+  id: number;
+  eventId: number;
+  photoUrl: string;
+  caption?: string | null;
+  uploadedAt: string;
+}
+
+export interface Review {
+  id: number;
+  eventId: number;
+  studentId: number;
+  studentName: string;
+  rating: number;
+  review?: string | null;
+  createdAt: string;
+}
+
+export interface EventDetail {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  venue: string;
+  eventDate: string;
+  registrationDeadline: string;
+  maxParticipants?: number | null;
+  registeredCount: number;
+  thumbnailUrl?: string | null;
+  eventStatus: EventDetailEventStatus;
+  collegeId: number;
+  collegeName: string;
+  averageRating?: number | null;
+  reviewCount: number;
+  photos: EventPhoto[];
+  reviews: Review[];
   createdAt: string;
 }
 
@@ -102,6 +170,7 @@ export interface CreateEventRequest {
   eventDate: string;
   registrationDeadline: string;
   maxParticipants?: number | null;
+  thumbnailUrl?: string | null;
 }
 
 export type RegistrationStatus =
@@ -166,6 +235,16 @@ export interface PlatformStats {
   pendingAdminRequests: number;
 }
 
+export interface AddPhotoRequest {
+  photoUrl: string;
+  caption?: string | null;
+}
+
+export interface AddReviewRequest {
+  rating: number;
+  review?: string | null;
+}
+
 export type VerifyEmailParams = {
   token: string;
 };
@@ -174,4 +253,13 @@ export type ListEventsParams = {
   college_id?: number;
   category?: string;
   search?: string;
+  status?: ListEventsStatus;
 };
+
+export type ListEventsStatus =
+  (typeof ListEventsStatus)[keyof typeof ListEventsStatus];
+
+export const ListEventsStatus = {
+  upcoming: "upcoming",
+  completed: "completed",
+} as const;

@@ -1,103 +1,94 @@
 import { Link } from "wouter";
-import { motion } from "framer-motion";
 import { AppLayout } from "@/components/layout";
-import { GraduationCap, Building2, ChevronRight, Star } from "lucide-react";
+import { Card } from "@/components/ui-components";
+import { GraduationCap, Building2, ChevronRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function LandingPage() {
   return (
     <AppLayout>
-      <div className="relative min-h-[calc(100vh-80px)] flex items-center justify-center overflow-hidden">
-        {/* Background Image & Overlay */}
+      <div className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center overflow-hidden py-20">
         <div className="absolute inset-0 z-0">
           <img 
             src={`${import.meta.env.BASE_URL}images/hero-bg.png`} 
-            alt="Luxurious dark gold background" 
-            className="w-full h-full object-cover opacity-60 mix-blend-luminosity"
+            alt="Luxury abstract background" 
+            className="w-full h-full object-cover opacity-60 mix-blend-screen"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/80 to-background" />
         </div>
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-20 flex flex-col items-center text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/5 backdrop-blur-md mb-8"
-          >
-            <Star className="w-4 h-4 text-primary fill-primary" />
-            <span className="text-xs font-medium text-primary uppercase tracking-widest">The Premier College Fest Network</span>
-          </motion.div>
-
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-5xl md:text-7xl font-display font-bold text-white mb-6 leading-tight max-w-4xl"
-          >
-            Elevate Your <br/>
-            <span className="gold-gradient-text italic font-medium">College Experience</span>
-          </motion.h1>
-
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-16"
-          >
-            Discover, register, and manage the most exclusive cultural and technical festivals across premier institutions.
-          </motion.p>
-
+        <div className="max-w-7xl mx-auto px-4 w-full relative z-10 flex flex-col items-center">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-3xl"
+            transition={{ duration: 0.8 }}
+            className="text-center max-w-3xl mx-auto mb-16"
           >
-            {/* Student Card */}
-            <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl" />
-              <div className="relative h-full bg-card/60 backdrop-blur-xl border border-white/10 hover:border-primary/50 transition-all duration-300 p-8 rounded-2xl flex flex-col items-start text-left">
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6 border border-primary/20 group-hover:scale-110 transition-transform">
-                  <GraduationCap className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="text-2xl font-display font-semibold mb-2 text-white group-hover:text-primary transition-colors">For Students</h3>
-                <p className="text-muted-foreground text-sm mb-8 flex-1">
-                  Discover events, register instantly, and track your participation across all participating colleges.
-                </p>
-                <div className="flex gap-4 w-full">
-                  <Link href="/student/login" className="flex-1 inline-flex justify-center items-center px-4 py-3 bg-primary text-primary-foreground font-semibold rounded-lg hover:bg-primary/90 transition-all shadow-[0_0_15px_-3px_hsl(var(--primary)/0.3)]">
-                    Login
-                  </Link>
-                  <Link href="/student/signup" className="flex-1 inline-flex justify-center items-center px-4 py-3 border border-white/20 text-white font-medium rounded-lg hover:bg-white/5 transition-all">
-                    Sign Up
-                  </Link>
-                </div>
-              </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold tracking-widest uppercase mb-6">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> The Premier Fest Network
             </div>
-
-            {/* Admin Card */}
-            <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-l from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl" />
-              <div className="relative h-full bg-card/60 backdrop-blur-xl border border-white/10 hover:border-primary/50 transition-all duration-300 p-8 rounded-2xl flex flex-col items-start text-left">
-                <div className="w-12 h-12 bg-secondary rounded-xl flex items-center justify-center mb-6 border border-white/10 group-hover:scale-110 transition-transform">
-                  <Building2 className="w-6 h-6 text-foreground" />
-                </div>
-                <h3 className="text-2xl font-display font-semibold mb-2 text-white">For Colleges</h3>
-                <p className="text-muted-foreground text-sm mb-8 flex-1">
-                  Host your festivals, manage events, and seamlessly handle thousands of student registrations.
-                </p>
-                <div className="flex gap-4 w-full">
-                  <Link href="/admin/login" className="flex-1 inline-flex justify-center items-center px-4 py-3 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 transition-all">
-                    Admin Portal
-                  </Link>
-                  <Link href="/admin/signup" className="flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors py-3">
-                    Register College <ChevronRight className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
-            </div>
+            <h1 className="text-5xl md:text-7xl font-display font-bold leading-tight mb-6">
+              Elevate Your <br />
+              <span className="gold-gradient-text">College Experience</span>
+            </h1>
+            <p className="text-lg md:text-xl text-muted-foreground font-light leading-relaxed">
+              Discover, register, and manage the most exclusive cultural and technical festivals across premier institutions.
+            </p>
           </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <Card hover className="h-full bg-card/40 backdrop-blur-xl border-white/10 group cursor-default">
+                <div className="p-8 flex flex-col h-full items-center text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-white/5 group-hover:border-primary/30">
+                    <GraduationCap className="w-8 h-8 text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-display font-semibold mb-3">For Students</h2>
+                  <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
+                    Explore top-tier events, secure your spot, and curate your personal festival calendar with ease.
+                  </p>
+                  <div className="mt-auto flex flex-col w-full gap-3">
+                    <Link href="/student/signup" className="w-full block bg-primary text-primary-foreground py-3.5 rounded-lg font-semibold hover:bg-primary/90 transition-all shadow-[0_0_20px_-5px_hsl(var(--primary)/0.5)]">
+                      Create Account
+                    </Link>
+                    <Link href="/student/login" className="w-full block bg-secondary text-foreground py-3.5 rounded-lg font-medium hover:bg-white/5 transition-all flex items-center justify-center gap-2 group/link">
+                      Sign In <ChevronRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
+                    </Link>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+            >
+              <Card hover className="h-full bg-card/40 backdrop-blur-xl border-white/10 group cursor-default">
+                <div className="p-8 flex flex-col h-full items-center text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-secondary flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500 border border-white/5 group-hover:border-primary/30">
+                    <Building2 className="w-8 h-8 text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-display font-semibold mb-3">For Colleges</h2>
+                  <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
+                    Manage your institution's premier events, oversee registrations, and showcase your cultural legacy.
+                  </p>
+                  <div className="mt-auto flex flex-col w-full gap-3">
+                    <Link href="/admin/signup" className="w-full block bg-white/5 border border-white/10 text-foreground py-3.5 rounded-lg font-semibold hover:bg-white/10 transition-all">
+                      Apply as Admin
+                    </Link>
+                    <Link href="/admin/login" className="w-full block bg-transparent text-primary py-3.5 rounded-lg font-medium hover:bg-primary/10 transition-all flex items-center justify-center gap-2 group/link border border-transparent hover:border-primary/20">
+                      Admin Sign In <ChevronRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
+                    </Link>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          </div>
         </div>
       </div>
     </AppLayout>

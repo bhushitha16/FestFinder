@@ -3,6 +3,8 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { collegesTable } from "./colleges";
 
+export const EVENT_CATEGORIES = ["Cultural", "Technical", "Sports", "Literary", "Management", "Workshop", "Other"] as const;
+
 export const eventsTable = pgTable("events", {
   id: serial("id").primaryKey(),
   title: varchar("title", { length: 255 }).notNull(),
@@ -12,6 +14,7 @@ export const eventsTable = pgTable("events", {
   eventDate: timestamp("event_date").notNull(),
   registrationDeadline: timestamp("registration_deadline").notNull(),
   maxParticipants: integer("max_participants"),
+  thumbnailUrl: text("thumbnail_url"),
   collegeId: integer("college_id").notNull().references(() => collegesTable.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

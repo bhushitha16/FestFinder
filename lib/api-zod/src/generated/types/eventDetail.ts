@@ -5,9 +5,11 @@
  * College Fest Portal API
  * OpenAPI spec version: 0.1.0
  */
-import type { EventEventStatus } from "./eventEventStatus";
+import type { EventDetailEventStatus } from "./eventDetailEventStatus";
+import type { EventPhoto } from "./eventPhoto";
+import type { Review } from "./review";
 
-export interface Event {
+export interface EventDetail {
   id: number;
   title: string;
   description: string;
@@ -18,10 +20,12 @@ export interface Event {
   maxParticipants?: number | null;
   registeredCount: number;
   thumbnailUrl?: string | null;
-  eventStatus: EventEventStatus;
+  eventStatus: EventDetailEventStatus;
   collegeId: number;
   collegeName: string;
   averageRating?: number | null;
   reviewCount: number;
+  photos: EventPhoto[];
+  reviews: Review[];
   createdAt: Date;
 }

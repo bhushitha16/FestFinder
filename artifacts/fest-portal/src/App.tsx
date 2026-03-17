@@ -16,6 +16,8 @@ import AdminDashboard from "./pages/admin/dashboard";
 import SuperAdminLogin from "./pages/superadmin/login";
 import SuperAdminDashboard from "./pages/superadmin/dashboard";
 import VerifyEmail from "./pages/verify-email";
+import EventDetail from "./pages/events/detail";
+import CollegeDetail from "./pages/colleges/detail";
 import NotFound from "./pages/not-found";
 
 const queryClient = new QueryClient({

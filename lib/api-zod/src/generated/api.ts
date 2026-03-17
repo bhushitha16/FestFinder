@@ -14,9 +14,6 @@ export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
 
-/**
- * @summary Register a new student
- */
 export const StudentSignupBody = zod.object({
   fullName: zod.string(),
   contactNumber: zod.string(),
@@ -26,9 +23,6 @@ export const StudentSignupBody = zod.object({
   password: zod.string(),
 });
 
-/**
- * @summary Student login
- */
 export const StudentLoginBody = zod.object({
   email: zod.string().email(),
   password: zod.string(),
@@ -49,9 +43,6 @@ export const StudentLoginResponse = zod.object({
     .optional(),
 });
 
-/**
- * @summary Register a new college admin
- */
 export const AdminSignupBody = zod.object({
   fullName: zod.string(),
   email: zod.string().email(),
@@ -61,9 +52,6 @@ export const AdminSignupBody = zod.object({
   password: zod.string(),
 });
 
-/**
- * @summary College admin login
- */
 export const AdminLoginBody = zod.object({
   email: zod.string().email(),
   password: zod.string(),
@@ -84,9 +72,6 @@ export const AdminLoginResponse = zod.object({
     .optional(),
 });
 
-/**
- * @summary Super admin login
- */
 export const SuperAdminLoginBody = zod.object({
   email: zod.string().email(),
   password: zod.string(),
@@ -107,9 +92,6 @@ export const SuperAdminLoginResponse = zod.object({
     .optional(),
 });
 
-/**
- * @summary Verify student email
- */
 export const VerifyEmailQueryParams = zod.object({
   token: zod.coerce.string(),
 });
@@ -118,9 +100,6 @@ export const VerifyEmailResponse = zod.object({
   message: zod.string(),
 });
 
-/**
- * @summary Get current user info
- */
 export const GetMeResponse = zod.object({
   id: zod.number(),
   email: zod.string(),
@@ -131,16 +110,16 @@ export const GetMeResponse = zod.object({
   collegeName: zod.string().nullish(),
 });
 
-/**
- * @summary Logout current user
- */
 export const LogoutResponse = zod.object({
   message: zod.string(),
 });
 
 /**
- * @summary List approved colleges
+ * @summary List event categories
  */
+export const ListCategoriesResponseItem = zod.string();
+export const ListCategoriesResponse = zod.array(ListCategoriesResponseItem);
+
 export const ListCollegesResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
@@ -150,13 +129,63 @@ export const ListCollegesResponseItem = zod.object({
 });
 export const ListCollegesResponse = zod.array(ListCollegesResponseItem);
 
-/**
- * @summary List all upcoming events
- */
+export const GetCollegeParams = zod.object({
+  collegeId: zod.coerce.number(),
+});
+
+export const GetCollegeResponse = zod.object({
+  id: zod.number(),
+  name: zod.string(),
+  status: zod.string(),
+  adminName: zod.string().nullish(),
+  upcomingEvents: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      description: zod.string(),
+      category: zod.string(),
+      venue: zod.string(),
+      eventDate: zod.date(),
+      registrationDeadline: zod.date(),
+      maxParticipants: zod.number().nullish(),
+      registeredCount: zod.number(),
+      thumbnailUrl: zod.string().nullish(),
+      eventStatus: zod.enum(["upcoming", "completed"]),
+      collegeId: zod.number(),
+      collegeName: zod.string(),
+      averageRating: zod.number().nullish(),
+      reviewCount: zod.number(),
+      createdAt: zod.date(),
+    }),
+  ),
+  pastEvents: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      description: zod.string(),
+      category: zod.string(),
+      venue: zod.string(),
+      eventDate: zod.date(),
+      registrationDeadline: zod.date(),
+      maxParticipants: zod.number().nullish(),
+      registeredCount: zod.number(),
+      thumbnailUrl: zod.string().nullish(),
+      eventStatus: zod.enum(["upcoming", "completed"]),
+      collegeId: zod.number(),
+      collegeName: zod.string(),
+      averageRating: zod.number().nullish(),
+      reviewCount: zod.number(),
+      createdAt: zod.date(),
+    }),
+  ),
+  createdAt: zod.date(),
+});
+
 export const ListEventsQueryParams = zod.object({
   college_id: zod.coerce.number().optional(),
   category: zod.coerce.string().optional(),
   search: zod.coerce.string().optional(),
+  status: zod.enum(["upcoming", "completed"]).optional(),
 });
 
 export const ListEventsResponseItem = zod.object({
@@ -169,15 +198,16 @@ export const ListEventsResponseItem = zod.object({
   registrationDeadline: zod.date(),
   maxParticipants: zod.number().nullish(),
   registeredCount: zod.number(),
+  thumbnailUrl: zod.string().nullish(),
+  eventStatus: zod.enum(["upcoming", "completed"]),
   collegeId: zod.number(),
   collegeName: zod.string(),
+  averageRating: zod.number().nullish(),
+  reviewCount: zod.number(),
   createdAt: zod.date(),
 });
 export const ListEventsResponse = zod.array(ListEventsResponseItem);
 
-/**
- * @summary Create a new event (college admin only)
- */
 export const CreateEventBody = zod.object({
   title: zod.string(),
   description: zod.string(),
@@ -186,11 +216,9 @@ export const CreateEventBody = zod.object({
   eventDate: zod.date(),
   registrationDeadline: zod.date(),
   maxParticipants: zod.number().nullish(),
+  thumbnailUrl: zod.string().nullish(),
 });
 
-/**
- * @summary Get event details
- */
 export const GetEventParams = zod.object({
   eventId: zod.coerce.number(),
 });
@@ -205,14 +233,35 @@ export const GetEventResponse = zod.object({
   registrationDeadline: zod.date(),
   maxParticipants: zod.number().nullish(),
   registeredCount: zod.number(),
+  thumbnailUrl: zod.string().nullish(),
+  eventStatus: zod.enum(["upcoming", "completed"]),
   collegeId: zod.number(),
   collegeName: zod.string(),
+  averageRating: zod.number().nullish(),
+  reviewCount: zod.number(),
+  photos: zod.array(
+    zod.object({
+      id: zod.number(),
+      eventId: zod.number(),
+      photoUrl: zod.string(),
+      caption: zod.string().nullish(),
+      uploadedAt: zod.date(),
+    }),
+  ),
+  reviews: zod.array(
+    zod.object({
+      id: zod.number(),
+      eventId: zod.number(),
+      studentId: zod.number(),
+      studentName: zod.string(),
+      rating: zod.number(),
+      review: zod.string().nullish(),
+      createdAt: zod.date(),
+    }),
+  ),
   createdAt: zod.date(),
 });
 
-/**
- * @summary Update an event (college admin only)
- */
 export const UpdateEventParams = zod.object({
   eventId: zod.coerce.number(),
 });
@@ -225,6 +274,7 @@ export const UpdateEventBody = zod.object({
   eventDate: zod.date(),
   registrationDeadline: zod.date(),
   maxParticipants: zod.number().nullish(),
+  thumbnailUrl: zod.string().nullish(),
 });
 
 export const UpdateEventResponse = zod.object({
@@ -237,14 +287,15 @@ export const UpdateEventResponse = zod.object({
   registrationDeadline: zod.date(),
   maxParticipants: zod.number().nullish(),
   registeredCount: zod.number(),
+  thumbnailUrl: zod.string().nullish(),
+  eventStatus: zod.enum(["upcoming", "completed"]),
   collegeId: zod.number(),
   collegeName: zod.string(),
+  averageRating: zod.number().nullish(),
+  reviewCount: zod.number(),
   createdAt: zod.date(),
 });
 
-/**
- * @summary Delete an event (college admin only)
- */
 export const DeleteEventParams = zod.object({
   eventId: zod.coerce.number(),
 });
@@ -253,16 +304,97 @@ export const DeleteEventResponse = zod.object({
   message: zod.string(),
 });
 
-/**
- * @summary Register for an event (student only)
- */
 export const RegisterForEventParams = zod.object({
   eventId: zod.coerce.number(),
 });
 
-/**
- * @summary Get events managed by the logged-in college admin
- */
+export const GetEventPhotosParams = zod.object({
+  eventId: zod.coerce.number(),
+});
+
+export const GetEventPhotosResponseItem = zod.object({
+  id: zod.number(),
+  eventId: zod.number(),
+  photoUrl: zod.string(),
+  caption: zod.string().nullish(),
+  uploadedAt: zod.date(),
+});
+export const GetEventPhotosResponse = zod.array(GetEventPhotosResponseItem);
+
+export const AddEventPhotoParams = zod.object({
+  eventId: zod.coerce.number(),
+});
+
+export const AddEventPhotoBody = zod.object({
+  photoUrl: zod.string(),
+  caption: zod.string().nullish(),
+});
+
+export const DeleteEventPhotoParams = zod.object({
+  eventId: zod.coerce.number(),
+  photoId: zod.coerce.number(),
+});
+
+export const DeleteEventPhotoResponse = zod.object({
+  message: zod.string(),
+});
+
+export const GetEventReviewsParams = zod.object({
+  eventId: zod.coerce.number(),
+});
+
+export const GetEventReviewsResponseItem = zod.object({
+  id: zod.number(),
+  eventId: zod.number(),
+  studentId: zod.number(),
+  studentName: zod.string(),
+  rating: zod.number(),
+  review: zod.string().nullish(),
+  createdAt: zod.date(),
+});
+export const GetEventReviewsResponse = zod.array(GetEventReviewsResponseItem);
+
+export const AddEventReviewParams = zod.object({
+  eventId: zod.coerce.number(),
+});
+
+export const AddEventReviewBody = zod.object({
+  rating: zod.number(),
+  review: zod.string().nullish(),
+});
+
+export const GetBookmarksResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  description: zod.string(),
+  category: zod.string(),
+  venue: zod.string(),
+  eventDate: zod.date(),
+  registrationDeadline: zod.date(),
+  maxParticipants: zod.number().nullish(),
+  registeredCount: zod.number(),
+  thumbnailUrl: zod.string().nullish(),
+  eventStatus: zod.enum(["upcoming", "completed"]),
+  collegeId: zod.number(),
+  collegeName: zod.string(),
+  averageRating: zod.number().nullish(),
+  reviewCount: zod.number(),
+  createdAt: zod.date(),
+});
+export const GetBookmarksResponse = zod.array(GetBookmarksResponseItem);
+
+export const AddBookmarkParams = zod.object({
+  eventId: zod.coerce.number(),
+});
+
+export const RemoveBookmarkParams = zod.object({
+  eventId: zod.coerce.number(),
+});
+
+export const RemoveBookmarkResponse = zod.object({
+  message: zod.string(),
+});
+
 export const GetAdminEventsResponseItem = zod.object({
   id: zod.number(),
   title: zod.string(),
@@ -273,15 +405,16 @@ export const GetAdminEventsResponseItem = zod.object({
   registrationDeadline: zod.date(),
   maxParticipants: zod.number().nullish(),
   registeredCount: zod.number(),
+  thumbnailUrl: zod.string().nullish(),
+  eventStatus: zod.enum(["upcoming", "completed"]),
   collegeId: zod.number(),
   collegeName: zod.string(),
+  averageRating: zod.number().nullish(),
+  reviewCount: zod.number(),
   createdAt: zod.date(),
 });
 export const GetAdminEventsResponse = zod.array(GetAdminEventsResponseItem);
 
-/**
- * @summary Get registrations for an event (college admin only)
- */
 export const GetEventRegistrationsParams = zod.object({
   eventId: zod.coerce.number(),
 });
@@ -301,9 +434,6 @@ export const GetEventRegistrationsResponse = zod.array(
   GetEventRegistrationsResponseItem,
 );
 
-/**
- * @summary Approve or reject a registration (college admin only)
- */
 export const UpdateRegistrationStatusParams = zod.object({
   registrationId: zod.coerce.number(),
 });
@@ -324,9 +454,6 @@ export const UpdateRegistrationStatusResponse = zod.object({
   registeredAt: zod.date(),
 });
 
-/**
- * @summary Get current student's registrations
- */
 export const GetStudentRegistrationsResponseItem = zod.object({
   id: zod.number(),
   eventId: zod.number(),
@@ -342,9 +469,6 @@ export const GetStudentRegistrationsResponse = zod.array(
   GetStudentRegistrationsResponseItem,
 );
 
-/**
- * @summary Get pending college admin requests
- */
 export const GetPendingAdminsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
@@ -357,9 +481,6 @@ export const GetPendingAdminsResponseItem = zod.object({
 });
 export const GetPendingAdminsResponse = zod.array(GetPendingAdminsResponseItem);
 
-/**
- * @summary Approve a college admin
- */
 export const ApproveAdminParams = zod.object({
   adminId: zod.coerce.number(),
 });
@@ -375,9 +496,6 @@ export const ApproveAdminResponse = zod.object({
   createdAt: zod.date(),
 });
 
-/**
- * @summary Reject a college admin
- */
 export const RejectAdminParams = zod.object({
   adminId: zod.coerce.number(),
 });
@@ -393,9 +511,6 @@ export const RejectAdminResponse = zod.object({
   createdAt: zod.date(),
 });
 
-/**
- * @summary Suspend a college admin
- */
 export const SuspendAdminParams = zod.object({
   adminId: zod.coerce.number(),
 });
@@ -411,9 +526,6 @@ export const SuspendAdminResponse = zod.object({
   createdAt: zod.date(),
 });
 
-/**
- * @summary Get platform-wide statistics
- */
 export const GetPlatformStatsResponse = zod.object({
   totalStudents: zod.number(),
   totalColleges: zod.number(),
@@ -422,9 +534,6 @@ export const GetPlatformStatsResponse = zod.object({
   pendingAdminRequests: zod.number(),
 });
 
-/**
- * @summary Get all colleges on the platform
- */
 export const GetAllCollegesResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
@@ -434,9 +543,6 @@ export const GetAllCollegesResponseItem = zod.object({
 });
 export const GetAllCollegesResponse = zod.array(GetAllCollegesResponseItem);
 
-/**
- * @summary Get all events on the platform
- */
 export const GetAllEventsResponseItem = zod.object({
   id: zod.number(),
   title: zod.string(),
@@ -447,8 +553,12 @@ export const GetAllEventsResponseItem = zod.object({
   registrationDeadline: zod.date(),
   maxParticipants: zod.number().nullish(),
   registeredCount: zod.number(),
+  thumbnailUrl: zod.string().nullish(),
+  eventStatus: zod.enum(["upcoming", "completed"]),
   collegeId: zod.number(),
   collegeName: zod.string(),
+  averageRating: zod.number().nullish(),
+  reviewCount: zod.number(),
   createdAt: zod.date(),
 });
 export const GetAllEventsResponse = zod.array(GetAllEventsResponseItem);

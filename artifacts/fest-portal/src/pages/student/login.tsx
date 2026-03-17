@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,9 +5,10 @@ import { z } from "zod";
 import { AppLayout } from "@/components/layout";
 import { Card, Input, Button } from "@/components/ui-components";
 import { useStudentLogin } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { getErrorMessage } from "@/lib/utils";
 import { GraduationCap } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -21,7 +21,7 @@ export default function StudentLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema)
   });
@@ -29,39 +29,27 @@ export default function StudentLogin() {
   const loginMutation = useStudentLogin({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         toast({ title: "Welcome back!", description: "Successfully logged in." });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         setLocation("/student/dashboard");
       },
-      onError: (error: any) => {
-        toast({ 
-          title: "Login failed", 
-          description: error?.response?.data?.message || "Invalid credentials",
-          variant: "destructive"
-        });
-      }
+      onError: (err) => toast({ title: "Login Failed", description: getErrorMessage(err), variant: "destructive" })
     }
   });
 
-  const onSubmit = (data: LoginForm) => {
-    loginMutation.mutate({ data });
-  };
-
   return (
     <AppLayout>
-      <div className="flex-1 flex items-center justify-center p-4 relative">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,175,55,0.05),transparent_50%)] pointer-events-none" />
-        
-        <Card className="w-full max-w-md relative z-10">
+      <div className="flex-1 flex items-center justify-center p-4 py-12">
+        <Card className="w-full max-w-md p-8 glass-panel border-t-primary/30">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
-              <GraduationCap className="w-8 h-8 text-primary" />
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
+              <GraduationCap className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-3xl font-display font-semibold">Student Portal</h1>
-            <p className="text-muted-foreground mt-2">Sign in to access your dashboard</p>
+            <h1 className="text-2xl font-display font-semibold mb-2">Student Portal</h1>
+            <p className="text-muted-foreground text-sm">Sign in to access your dashboard</p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={handleSubmit((d) => loginMutation.mutate({ data: d }))} className="space-y-5">
             <Input 
               label="College Email" 
               type="email"
@@ -78,19 +66,15 @@ export default function StudentLogin() {
               error={errors.password?.message}
             />
 
-            <Button 
-              type="submit" 
-              className="w-full mt-8" 
-              isLoading={loginMutation.isPending}
-            >
+            <Button type="submit" className="w-full mt-2" size="lg" isLoading={loginMutation.isPending}>
               Sign In
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+          <div className="mt-8 text-center text-sm text-muted-foreground border-t border-white/5 pt-6">
+            New here?{" "}
             <Link href="/student/signup" className="text-primary hover:underline font-medium">
-              Register here
+              Create an account
             </Link>
           </div>
         </Card>

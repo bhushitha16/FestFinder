@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useContext } from "react";
 import { useGetMe, useLogout } from "@workspace/api-client-react";
 import type { UserInfo } from "@workspace/api-client-react/src/generated/api.schemas";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,10 +14,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { data: user, isLoading, error } = useGetMe({
+  const { data: user, isLoading } = useGetMe({
     query: {
       retry: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
+      staleTime: 5 * 60 * 1000,
     }
   });
 

@@ -3,3 +3,6 @@ export * from "./colleges";
 export * from "./events";
 export * from "./registrations";
 export * from "./sessions";
+export * from "./event_photos";
+export * from "./bookmarks";
+export * from "./reviews";

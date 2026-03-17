@@ -5,9 +5,11 @@
  * College Fest Portal API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListEventsStatus } from "./listEventsStatus";
 
 export type ListEventsParams = {
   college_id?: number;
   category?: string;
   search?: string;
+  status?: ListEventsStatus;
 };

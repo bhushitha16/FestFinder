@@ -14,4 +14,5 @@ export interface CreateEventRequest {
   eventDate: Date;
   registrationDeadline: Date;
   maxParticipants?: number | null;
+  thumbnailUrl?: string | null;
 }

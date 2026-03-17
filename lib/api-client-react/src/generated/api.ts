@@ -17,19 +17,25 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddPhotoRequest,
+  AddReviewRequest,
   AdminSignupRequest,
   AdminUser,
   AuthResponse,
   College,
+  CollegeDetail,
   CreateEventRequest,
   ErrorResponse,
   Event,
+  EventDetail,
+  EventPhoto,
   HealthStatus,
   ListEventsParams,
   LoginRequest,
   MessageResponse,
   PlatformStats,
   Registration,
+  Review,
   StudentSignupRequest,
   UpdateStatusRequest,
   UserInfo,
@@ -120,9 +126,6 @@ export function useHealthCheck<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Register a new student
- */
 export const getStudentSignupUrl = () => {
   return `/api/auth/student/signup`;
 };
@@ -130,8 +133,8 @@ export const getStudentSignupUrl = () => {
 export const studentSignup = async (
   studentSignupRequest: StudentSignupRequest,
   options?: RequestInit,
-): Promise<AuthResponse> => {
-  return customFetch<AuthResponse>(getStudentSignupUrl(), {
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getStudentSignupUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -183,9 +186,6 @@ export type StudentSignupMutationResult = NonNullable<
 export type StudentSignupMutationBody = BodyType<StudentSignupRequest>;
 export type StudentSignupMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Register a new student
- */
 export const useStudentSignup = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -206,9 +206,6 @@ export const useStudentSignup = <
   return useMutation(getStudentSignupMutationOptions(options));
 };
 
-/**
- * @summary Student login
- */
 export const getStudentLoginUrl = () => {
   return `/api/auth/student/login`;
 };
@@ -269,9 +266,6 @@ export type StudentLoginMutationResult = NonNullable<
 export type StudentLoginMutationBody = BodyType<LoginRequest>;
 export type StudentLoginMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Student login
- */
 export const useStudentLogin = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -292,9 +286,6 @@ export const useStudentLogin = <
   return useMutation(getStudentLoginMutationOptions(options));
 };
 
-/**
- * @summary Register a new college admin
- */
 export const getAdminSignupUrl = () => {
   return `/api/auth/admin/signup`;
 };
@@ -302,8 +293,8 @@ export const getAdminSignupUrl = () => {
 export const adminSignup = async (
   adminSignupRequest: AdminSignupRequest,
   options?: RequestInit,
-): Promise<AuthResponse> => {
-  return customFetch<AuthResponse>(getAdminSignupUrl(), {
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getAdminSignupUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -355,9 +346,6 @@ export type AdminSignupMutationResult = NonNullable<
 export type AdminSignupMutationBody = BodyType<AdminSignupRequest>;
 export type AdminSignupMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Register a new college admin
- */
 export const useAdminSignup = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -378,9 +366,6 @@ export const useAdminSignup = <
   return useMutation(getAdminSignupMutationOptions(options));
 };
 
-/**
- * @summary College admin login
- */
 export const getAdminLoginUrl = () => {
   return `/api/auth/admin/login`;
 };
@@ -441,9 +426,6 @@ export type AdminLoginMutationResult = NonNullable<
 export type AdminLoginMutationBody = BodyType<LoginRequest>;
 export type AdminLoginMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary College admin login
- */
 export const useAdminLogin = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -464,9 +446,6 @@ export const useAdminLogin = <
   return useMutation(getAdminLoginMutationOptions(options));
 };
 
-/**
- * @summary Super admin login
- */
 export const getSuperAdminLoginUrl = () => {
   return `/api/auth/superadmin/login`;
 };
@@ -527,9 +506,6 @@ export type SuperAdminLoginMutationResult = NonNullable<
 export type SuperAdminLoginMutationBody = BodyType<LoginRequest>;
 export type SuperAdminLoginMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Super admin login
- */
 export const useSuperAdminLogin = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -550,9 +526,6 @@ export const useSuperAdminLogin = <
   return useMutation(getSuperAdminLoginMutationOptions(options));
 };
 
-/**
- * @summary Verify student email
- */
 export const getVerifyEmailUrl = (params: VerifyEmailParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -617,10 +590,6 @@ export type VerifyEmailQueryResult = NonNullable<
 >;
 export type VerifyEmailQueryError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Verify student email
- */
-
 export function useVerifyEmail<
   TData = Awaited<ReturnType<typeof verifyEmail>>,
   TError = ErrorType<ErrorResponse>,
@@ -644,9 +613,6 @@ export function useVerifyEmail<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Get current user info
- */
 export const getGetMeUrl = () => {
   return `/api/auth/me`;
 };
@@ -687,10 +653,6 @@ export const getGetMeQueryOptions = <
 export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>;
 export type GetMeQueryError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Get current user info
- */
-
 export function useGetMe<
   TData = Awaited<ReturnType<typeof getMe>>,
   TError = ErrorType<ErrorResponse>,
@@ -707,9 +669,6 @@ export function useGetMe<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Logout current user
- */
 export const getLogoutUrl = () => {
   return `/api/auth/logout`;
 };
@@ -765,9 +724,6 @@ export type LogoutMutationResult = NonNullable<
 
 export type LogoutMutationError = ErrorType<unknown>;
 
-/**
- * @summary Logout current user
- */
 export const useLogout = <
   TError = ErrorType<unknown>,
   TContext = unknown,
@@ -789,8 +745,80 @@ export const useLogout = <
 };
 
 /**
- * @summary List approved colleges
+ * @summary List event categories
  */
+export const getListCategoriesUrl = () => {
+  return `/api/categories`;
+};
+
+export const listCategories = async (
+  options?: RequestInit,
+): Promise<string[]> => {
+  return customFetch<string[]>(getListCategoriesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCategoriesQueryKey = () => {
+  return [`/api/categories`] as const;
+};
+
+export const getListCategoriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCategories>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listCategories>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCategoriesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCategories>>> = ({
+    signal,
+  }) => listCategories({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCategories>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListCategoriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCategories>>
+>;
+export type ListCategoriesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List event categories
+ */
+
+export function useListCategories<
+  TData = Awaited<ReturnType<typeof listCategories>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listCategories>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListCategoriesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
 export const getListCollegesUrl = () => {
   return `/api/colleges`;
 };
@@ -839,10 +867,6 @@ export type ListCollegesQueryResult = NonNullable<
 >;
 export type ListCollegesQueryError = ErrorType<unknown>;
 
-/**
- * @summary List approved colleges
- */
-
 export function useListColleges<
   TData = Awaited<ReturnType<typeof listColleges>>,
   TError = ErrorType<unknown>,
@@ -863,9 +887,86 @@ export function useListColleges<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary List all upcoming events
- */
+export const getGetCollegeUrl = (collegeId: number) => {
+  return `/api/colleges/${collegeId}`;
+};
+
+export const getCollege = async (
+  collegeId: number,
+  options?: RequestInit,
+): Promise<CollegeDetail> => {
+  return customFetch<CollegeDetail>(getGetCollegeUrl(collegeId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCollegeQueryKey = (collegeId: number) => {
+  return [`/api/colleges/${collegeId}`] as const;
+};
+
+export const getGetCollegeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCollege>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  collegeId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCollege>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCollegeQueryKey(collegeId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCollege>>> = ({
+    signal,
+  }) => getCollege(collegeId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!collegeId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCollege>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCollegeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCollege>>
+>;
+export type GetCollegeQueryError = ErrorType<ErrorResponse>;
+
+export function useGetCollege<
+  TData = Awaited<ReturnType<typeof getCollege>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  collegeId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCollege>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCollegeQueryOptions(collegeId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
 export const getListEventsUrl = (params?: ListEventsParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -930,10 +1031,6 @@ export type ListEventsQueryResult = NonNullable<
 >;
 export type ListEventsQueryError = ErrorType<unknown>;
 
-/**
- * @summary List all upcoming events
- */
-
 export function useListEvents<
   TData = Awaited<ReturnType<typeof listEvents>>,
   TError = ErrorType<unknown>,
@@ -957,9 +1054,6 @@ export function useListEvents<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Create a new event (college admin only)
- */
 export const getCreateEventUrl = () => {
   return `/api/events`;
 };
@@ -1020,9 +1114,6 @@ export type CreateEventMutationResult = NonNullable<
 export type CreateEventMutationBody = BodyType<CreateEventRequest>;
 export type CreateEventMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Create a new event (college admin only)
- */
 export const useCreateEvent = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -1043,9 +1134,6 @@ export const useCreateEvent = <
   return useMutation(getCreateEventMutationOptions(options));
 };
 
-/**
- * @summary Get event details
- */
 export const getGetEventUrl = (eventId: number) => {
   return `/api/events/${eventId}`;
 };
@@ -1053,8 +1141,8 @@ export const getGetEventUrl = (eventId: number) => {
 export const getEvent = async (
   eventId: number,
   options?: RequestInit,
-): Promise<Event> => {
-  return customFetch<Event>(getGetEventUrl(eventId), {
+): Promise<EventDetail> => {
+  return customFetch<EventDetail>(getGetEventUrl(eventId), {
     ...options,
     method: "GET",
   });
@@ -1101,10 +1189,6 @@ export type GetEventQueryResult = NonNullable<
 >;
 export type GetEventQueryError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Get event details
- */
-
 export function useGetEvent<
   TData = Awaited<ReturnType<typeof getEvent>>,
   TError = ErrorType<ErrorResponse>,
@@ -1128,9 +1212,6 @@ export function useGetEvent<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Update an event (college admin only)
- */
 export const getUpdateEventUrl = (eventId: number) => {
   return `/api/events/${eventId}`;
 };
@@ -1192,9 +1273,6 @@ export type UpdateEventMutationResult = NonNullable<
 export type UpdateEventMutationBody = BodyType<CreateEventRequest>;
 export type UpdateEventMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Update an event (college admin only)
- */
 export const useUpdateEvent = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -1215,9 +1293,6 @@ export const useUpdateEvent = <
   return useMutation(getUpdateEventMutationOptions(options));
 };
 
-/**
- * @summary Delete an event (college admin only)
- */
 export const getDeleteEventUrl = (eventId: number) => {
   return `/api/events/${eventId}`;
 };
@@ -1276,9 +1351,6 @@ export type DeleteEventMutationResult = NonNullable<
 
 export type DeleteEventMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Delete an event (college admin only)
- */
 export const useDeleteEvent = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -1299,9 +1371,6 @@ export const useDeleteEvent = <
   return useMutation(getDeleteEventMutationOptions(options));
 };
 
-/**
- * @summary Register for an event (student only)
- */
 export const getRegisterForEventUrl = (eventId: number) => {
   return `/api/events/${eventId}/register`;
 };
@@ -1360,9 +1429,6 @@ export type RegisterForEventMutationResult = NonNullable<
 
 export type RegisterForEventMutationError = ErrorType<ErrorResponse>;
 
-/**
- * @summary Register for an event (student only)
- */
 export const useRegisterForEvent = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
@@ -1383,9 +1449,633 @@ export const useRegisterForEvent = <
   return useMutation(getRegisterForEventMutationOptions(options));
 };
 
-/**
- * @summary Get events managed by the logged-in college admin
- */
+export const getGetEventPhotosUrl = (eventId: number) => {
+  return `/api/events/${eventId}/photos`;
+};
+
+export const getEventPhotos = async (
+  eventId: number,
+  options?: RequestInit,
+): Promise<EventPhoto[]> => {
+  return customFetch<EventPhoto[]>(getGetEventPhotosUrl(eventId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEventPhotosQueryKey = (eventId: number) => {
+  return [`/api/events/${eventId}/photos`] as const;
+};
+
+export const getGetEventPhotosQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEventPhotos>>,
+  TError = ErrorType<unknown>,
+>(
+  eventId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEventPhotos>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEventPhotosQueryKey(eventId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEventPhotos>>> = ({
+    signal,
+  }) => getEventPhotos(eventId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!eventId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getEventPhotos>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetEventPhotosQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEventPhotos>>
+>;
+export type GetEventPhotosQueryError = ErrorType<unknown>;
+
+export function useGetEventPhotos<
+  TData = Awaited<ReturnType<typeof getEventPhotos>>,
+  TError = ErrorType<unknown>,
+>(
+  eventId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEventPhotos>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetEventPhotosQueryOptions(eventId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getAddEventPhotoUrl = (eventId: number) => {
+  return `/api/events/${eventId}/photos`;
+};
+
+export const addEventPhoto = async (
+  eventId: number,
+  addPhotoRequest: AddPhotoRequest,
+  options?: RequestInit,
+): Promise<EventPhoto> => {
+  return customFetch<EventPhoto>(getAddEventPhotoUrl(eventId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addPhotoRequest),
+  });
+};
+
+export const getAddEventPhotoMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addEventPhoto>>,
+    TError,
+    { eventId: number; data: BodyType<AddPhotoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addEventPhoto>>,
+  TError,
+  { eventId: number; data: BodyType<AddPhotoRequest> },
+  TContext
+> => {
+  const mutationKey = ["addEventPhoto"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addEventPhoto>>,
+    { eventId: number; data: BodyType<AddPhotoRequest> }
+  > = (props) => {
+    const { eventId, data } = props ?? {};
+
+    return addEventPhoto(eventId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddEventPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addEventPhoto>>
+>;
+export type AddEventPhotoMutationBody = BodyType<AddPhotoRequest>;
+export type AddEventPhotoMutationError = ErrorType<ErrorResponse>;
+
+export const useAddEventPhoto = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addEventPhoto>>,
+    TError,
+    { eventId: number; data: BodyType<AddPhotoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addEventPhoto>>,
+  TError,
+  { eventId: number; data: BodyType<AddPhotoRequest> },
+  TContext
+> => {
+  return useMutation(getAddEventPhotoMutationOptions(options));
+};
+
+export const getDeleteEventPhotoUrl = (eventId: number, photoId: number) => {
+  return `/api/events/${eventId}/photos/${photoId}`;
+};
+
+export const deleteEventPhoto = async (
+  eventId: number,
+  photoId: number,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(
+    getDeleteEventPhotoUrl(eventId, photoId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getDeleteEventPhotoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteEventPhoto>>,
+    TError,
+    { eventId: number; photoId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteEventPhoto>>,
+  TError,
+  { eventId: number; photoId: number },
+  TContext
+> => {
+  const mutationKey = ["deleteEventPhoto"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteEventPhoto>>,
+    { eventId: number; photoId: number }
+  > = (props) => {
+    const { eventId, photoId } = props ?? {};
+
+    return deleteEventPhoto(eventId, photoId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteEventPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteEventPhoto>>
+>;
+
+export type DeleteEventPhotoMutationError = ErrorType<unknown>;
+
+export const useDeleteEventPhoto = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteEventPhoto>>,
+    TError,
+    { eventId: number; photoId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteEventPhoto>>,
+  TError,
+  { eventId: number; photoId: number },
+  TContext
+> => {
+  return useMutation(getDeleteEventPhotoMutationOptions(options));
+};
+
+export const getGetEventReviewsUrl = (eventId: number) => {
+  return `/api/events/${eventId}/reviews`;
+};
+
+export const getEventReviews = async (
+  eventId: number,
+  options?: RequestInit,
+): Promise<Review[]> => {
+  return customFetch<Review[]>(getGetEventReviewsUrl(eventId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEventReviewsQueryKey = (eventId: number) => {
+  return [`/api/events/${eventId}/reviews`] as const;
+};
+
+export const getGetEventReviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEventReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  eventId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEventReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetEventReviewsQueryKey(eventId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEventReviews>>> = ({
+    signal,
+  }) => getEventReviews(eventId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!eventId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getEventReviews>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetEventReviewsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEventReviews>>
+>;
+export type GetEventReviewsQueryError = ErrorType<unknown>;
+
+export function useGetEventReviews<
+  TData = Awaited<ReturnType<typeof getEventReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  eventId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getEventReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetEventReviewsQueryOptions(eventId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getAddEventReviewUrl = (eventId: number) => {
+  return `/api/events/${eventId}/reviews`;
+};
+
+export const addEventReview = async (
+  eventId: number,
+  addReviewRequest: AddReviewRequest,
+  options?: RequestInit,
+): Promise<Review> => {
+  return customFetch<Review>(getAddEventReviewUrl(eventId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addReviewRequest),
+  });
+};
+
+export const getAddEventReviewMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addEventReview>>,
+    TError,
+    { eventId: number; data: BodyType<AddReviewRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addEventReview>>,
+  TError,
+  { eventId: number; data: BodyType<AddReviewRequest> },
+  TContext
+> => {
+  const mutationKey = ["addEventReview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addEventReview>>,
+    { eventId: number; data: BodyType<AddReviewRequest> }
+  > = (props) => {
+    const { eventId, data } = props ?? {};
+
+    return addEventReview(eventId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddEventReviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addEventReview>>
+>;
+export type AddEventReviewMutationBody = BodyType<AddReviewRequest>;
+export type AddEventReviewMutationError = ErrorType<ErrorResponse>;
+
+export const useAddEventReview = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addEventReview>>,
+    TError,
+    { eventId: number; data: BodyType<AddReviewRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addEventReview>>,
+  TError,
+  { eventId: number; data: BodyType<AddReviewRequest> },
+  TContext
+> => {
+  return useMutation(getAddEventReviewMutationOptions(options));
+};
+
+export const getGetBookmarksUrl = () => {
+  return `/api/bookmarks`;
+};
+
+export const getBookmarks = async (options?: RequestInit): Promise<Event[]> => {
+  return customFetch<Event[]>(getGetBookmarksUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBookmarksQueryKey = () => {
+  return [`/api/bookmarks`] as const;
+};
+
+export const getGetBookmarksQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBookmarks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getBookmarks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBookmarksQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBookmarks>>> = ({
+    signal,
+  }) => getBookmarks({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBookmarks>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBookmarksQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBookmarks>>
+>;
+export type GetBookmarksQueryError = ErrorType<unknown>;
+
+export function useGetBookmarks<
+  TData = Awaited<ReturnType<typeof getBookmarks>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getBookmarks>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBookmarksQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getAddBookmarkUrl = (eventId: number) => {
+  return `/api/bookmarks/${eventId}`;
+};
+
+export const addBookmark = async (
+  eventId: number,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getAddBookmarkUrl(eventId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAddBookmarkMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addBookmark>>,
+    TError,
+    { eventId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addBookmark>>,
+  TError,
+  { eventId: number },
+  TContext
+> => {
+  const mutationKey = ["addBookmark"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addBookmark>>,
+    { eventId: number }
+  > = (props) => {
+    const { eventId } = props ?? {};
+
+    return addBookmark(eventId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddBookmarkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addBookmark>>
+>;
+
+export type AddBookmarkMutationError = ErrorType<ErrorResponse>;
+
+export const useAddBookmark = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addBookmark>>,
+    TError,
+    { eventId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addBookmark>>,
+  TError,
+  { eventId: number },
+  TContext
+> => {
+  return useMutation(getAddBookmarkMutationOptions(options));
+};
+
+export const getRemoveBookmarkUrl = (eventId: number) => {
+  return `/api/bookmarks/${eventId}`;
+};
+
+export const removeBookmark = async (
+  eventId: number,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(getRemoveBookmarkUrl(eventId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveBookmarkMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeBookmark>>,
+    TError,
+    { eventId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeBookmark>>,
+  TError,
+  { eventId: number },
+  TContext
+> => {
+  const mutationKey = ["removeBookmark"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeBookmark>>,
+    { eventId: number }
+  > = (props) => {
+    const { eventId } = props ?? {};
+
+    return removeBookmark(eventId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveBookmarkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeBookmark>>
+>;
+
+export type RemoveBookmarkMutationError = ErrorType<unknown>;
+
+export const useRemoveBookmark = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeBookmark>>,
+    TError,
+    { eventId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeBookmark>>,
+  TError,
+  { eventId: number },
+  TContext
+> => {
+  return useMutation(getRemoveBookmarkMutationOptions(options));
+};
+
 export const getGetAdminEventsUrl = () => {
   return `/api/admin/events`;
 };
@@ -1434,10 +2124,6 @@ export type GetAdminEventsQueryResult = NonNullable<
 >;
 export type GetAdminEventsQueryError = ErrorType<unknown>;
 
-/**
- * @summary Get events managed by the logged-in college admin
- */
-
 export function useGetAdminEvents<
   TData = Awaited<ReturnType<typeof getAdminEvents>>,
   TError = ErrorType<unknown>,
@@ -1458,9 +2144,6 @@ export function useGetAdminEvents<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Get registrations for an event (college admin only)
- */
 export const getGetEventRegistrationsUrl = (eventId: number) => {
   return `/api/admin/events/${eventId}/registrations`;
 };
@@ -1520,10 +2203,6 @@ export type GetEventRegistrationsQueryResult = NonNullable<
 >;
 export type GetEventRegistrationsQueryError = ErrorType<unknown>;
 
-/**
- * @summary Get registrations for an event (college admin only)
- */
-
 export function useGetEventRegistrations<
   TData = Awaited<ReturnType<typeof getEventRegistrations>>,
   TError = ErrorType<unknown>,
@@ -1547,9 +2226,6 @@ export function useGetEventRegistrations<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Approve or reject a registration (college admin only)
- */
 export const getUpdateRegistrationStatusUrl = (registrationId: number) => {
   return `/api/admin/registrations/${registrationId}/status`;
 };
@@ -1615,9 +2291,6 @@ export type UpdateRegistrationStatusMutationBody =
   BodyType<UpdateStatusRequest>;
 export type UpdateRegistrationStatusMutationError = ErrorType<unknown>;
 
-/**
- * @summary Approve or reject a registration (college admin only)
- */
 export const useUpdateRegistrationStatus = <
   TError = ErrorType<unknown>,
   TContext = unknown,
@@ -1638,9 +2311,6 @@ export const useUpdateRegistrationStatus = <
   return useMutation(getUpdateRegistrationStatusMutationOptions(options));
 };
 
-/**
- * @summary Get current student's registrations
- */
 export const getGetStudentRegistrationsUrl = () => {
   return `/api/student/registrations`;
 };
@@ -1690,10 +2360,6 @@ export type GetStudentRegistrationsQueryResult = NonNullable<
 >;
 export type GetStudentRegistrationsQueryError = ErrorType<unknown>;
 
-/**
- * @summary Get current student's registrations
- */
-
 export function useGetStudentRegistrations<
   TData = Awaited<ReturnType<typeof getStudentRegistrations>>,
   TError = ErrorType<unknown>,
@@ -1714,9 +2380,6 @@ export function useGetStudentRegistrations<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Get pending college admin requests
- */
 export const getGetPendingAdminsUrl = () => {
   return `/api/superadmin/admins/pending`;
 };
@@ -1765,10 +2428,6 @@ export type GetPendingAdminsQueryResult = NonNullable<
 >;
 export type GetPendingAdminsQueryError = ErrorType<unknown>;
 
-/**
- * @summary Get pending college admin requests
- */
-
 export function useGetPendingAdmins<
   TData = Awaited<ReturnType<typeof getPendingAdmins>>,
   TError = ErrorType<unknown>,
@@ -1789,9 +2448,6 @@ export function useGetPendingAdmins<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Approve a college admin
- */
 export const getApproveAdminUrl = (adminId: number) => {
   return `/api/superadmin/admins/${adminId}/approve`;
 };
@@ -1850,9 +2506,6 @@ export type ApproveAdminMutationResult = NonNullable<
 
 export type ApproveAdminMutationError = ErrorType<unknown>;
 
-/**
- * @summary Approve a college admin
- */
 export const useApproveAdmin = <
   TError = ErrorType<unknown>,
   TContext = unknown,
@@ -1873,9 +2526,6 @@ export const useApproveAdmin = <
   return useMutation(getApproveAdminMutationOptions(options));
 };
 
-/**
- * @summary Reject a college admin
- */
 export const getRejectAdminUrl = (adminId: number) => {
   return `/api/superadmin/admins/${adminId}/reject`;
 };
@@ -1934,9 +2584,6 @@ export type RejectAdminMutationResult = NonNullable<
 
 export type RejectAdminMutationError = ErrorType<unknown>;
 
-/**
- * @summary Reject a college admin
- */
 export const useRejectAdmin = <
   TError = ErrorType<unknown>,
   TContext = unknown,
@@ -1957,9 +2604,6 @@ export const useRejectAdmin = <
   return useMutation(getRejectAdminMutationOptions(options));
 };
 
-/**
- * @summary Suspend a college admin
- */
 export const getSuspendAdminUrl = (adminId: number) => {
   return `/api/superadmin/admins/${adminId}/suspend`;
 };
@@ -2018,9 +2662,6 @@ export type SuspendAdminMutationResult = NonNullable<
 
 export type SuspendAdminMutationError = ErrorType<unknown>;
 
-/**
- * @summary Suspend a college admin
- */
 export const useSuspendAdmin = <
   TError = ErrorType<unknown>,
   TContext = unknown,
@@ -2041,9 +2682,6 @@ export const useSuspendAdmin = <
   return useMutation(getSuspendAdminMutationOptions(options));
 };
 
-/**
- * @summary Get platform-wide statistics
- */
 export const getGetPlatformStatsUrl = () => {
   return `/api/superadmin/stats`;
 };
@@ -2092,10 +2730,6 @@ export type GetPlatformStatsQueryResult = NonNullable<
 >;
 export type GetPlatformStatsQueryError = ErrorType<unknown>;
 
-/**
- * @summary Get platform-wide statistics
- */
-
 export function useGetPlatformStats<
   TData = Awaited<ReturnType<typeof getPlatformStats>>,
   TError = ErrorType<unknown>,
@@ -2116,9 +2750,6 @@ export function useGetPlatformStats<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Get all colleges on the platform
- */
 export const getGetAllCollegesUrl = () => {
   return `/api/superadmin/colleges`;
 };
@@ -2167,10 +2798,6 @@ export type GetAllCollegesQueryResult = NonNullable<
 >;
 export type GetAllCollegesQueryError = ErrorType<unknown>;
 
-/**
- * @summary Get all colleges on the platform
- */
-
 export function useGetAllColleges<
   TData = Awaited<ReturnType<typeof getAllColleges>>,
   TError = ErrorType<unknown>,
@@ -2191,9 +2818,6 @@ export function useGetAllColleges<
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
-/**
- * @summary Get all events on the platform
- */
 export const getGetAllEventsUrl = () => {
   return `/api/superadmin/events`;
 };
@@ -2239,10 +2863,6 @@ export type GetAllEventsQueryResult = NonNullable<
   Awaited<ReturnType<typeof getAllEvents>>
 >;
 export type GetAllEventsQueryError = ErrorType<unknown>;
-
-/**
- * @summary Get all events on the platform
- */
 
 export function useGetAllEvents<
   TData = Awaited<ReturnType<typeof getAllEvents>>,
