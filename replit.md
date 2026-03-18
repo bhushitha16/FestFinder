@@ -1,81 +1,90 @@
-# Workspace
+# College Fest Portal — Lumina Fests
 
-## Overview
+A centralized college fest platform with a black and gold luxury theme. Students can discover and register for events, college admins manage their institution's events, and a super admin oversees the entire platform.
 
-College Fest Portal — A centralized platform for posting, viewing, and registering for college fests and events. Black and gold themed, premium design.
+## Architecture
 
-## Stack
+**Monorepo (pnpm workspaces):**
+- `artifacts/fest-portal` — React + Vite frontend (port `$PORT`, preview at `/`)
+- `artifacts/api-server` — Express.js REST API (port 8080, proxied at `/api`)
+- `lib/db` — Drizzle ORM schema + database client
+- `lib/api-spec` — OpenAPI spec + orval codegen → React Query hooks
+- `lib/api-client-react` — Auto-generated TypeScript API client
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
-- **Frontend**: React + Vite, shadcn/ui, Tailwind CSS, Framer Motion
+## Database
 
-## Structure
+PostgreSQL via `DATABASE_URL`. Drizzle ORM manages schema.
 
-```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   ├── api-server/         # Express API server
-│   └── fest-portal/        # React + Vite frontend (College Fest Portal)
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts
-├── pnpm-workspace.yaml
-├── tsconfig.base.json
-├── tsconfig.json
-└── package.json
-```
+**Tables:** `users`, `student_profiles`, `admin_profiles`, `colleges`, `events`, `registrations`, `event_photos`, `bookmarks`, `reviews`
 
-## User Roles
+**Push schema changes:** `pnpm --filter @workspace/db run push-force`
 
-1. **Student** — Signs up with college email, browses/registers for events, tracks registration status
-2. **College Admin** — Creates/manages events, approves/rejects student registrations, requires Super Admin approval
-3. **Super Admin** — Approves college admins, manages platform, views stats
+**Regenerate API client:** `pnpm --filter @workspace/api-spec run codegen`
 
 ## Auth
 
-- Cookie-based sessions (httpOnly)
-- Students: email verification required (token printed to console in dev)
-- Admins: Super Admin approval required before login
-- Super Admin credentials: `superadmin@festportal.com` / `superadmin123` (set via `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` env vars)
+- Cookie-based sessions (httpOnly, `connect.sid`)
+- Students: auto-verified on signup
+- College Admins: require Super Admin approval before accessing dashboard
+- Super Admin: `superadmin@festportal.com` / `superadmin123` (set via `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD` env vars)
 
-## Database Schema
+## User Roles
 
-- `users` — all users (students, admins, super admin)
-- `student_profiles` — college ID, college ID number
-- `admin_profiles` — college name, designation
-- `colleges` — approved colleges
-- `events` — fest events with date, venue, category
-- `registrations` — student event registrations with status
-- `sessions` — session tokens
+| Role | Sign-up path | Login path | Dashboard |
+|------|-------------|-----------|-----------|
+| Student | `/student/signup` | `/student/login` | `/student/dashboard` |
+| College Admin | `/admin/signup` | `/admin/login` | `/admin/dashboard` |
+| Super Admin | — | `/superadmin/login` | `/superadmin/dashboard` |
+
+## Key Features
+
+- **Students:** Browse events with category/status filters, register for events, bookmark events, post reviews on completed events, view registrations
+- **College Admins:** Create/edit/delete events (with thumbnail URLs), manage student registrations (approve/reject), upload post-event photo galleries
+- **Super Admin:** Approve/reject/suspend college admins, view platform stats, browse all colleges and events
 
 ## API Routes
 
-All routes prefixed with `/api`:
-- Auth: `/auth/student/signup|login`, `/auth/admin/signup|login`, `/auth/superadmin/login`, `/auth/verify-email`, `/auth/me`, `/auth/logout`
-- Public: `GET /colleges`, `GET /events`, `GET /events/:id`
-- Student: `POST /events/:id/register`, `GET /student/registrations`
-- Admin: `GET|POST /events`, `PUT|DELETE /events/:id`, `GET /admin/events`, `GET /admin/events/:id/registrations`, `PUT /admin/registrations/:id/status`
-- Super Admin: `GET /superadmin/admins/pending`, `PUT /superadmin/admins/:id/approve|reject|suspend`, `GET /superadmin/stats|colleges|events`
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/events` | List events (with filters: category, status, search, college_id) |
+| GET | `/api/events/:id` | Event detail (includes photos + reviews) |
+| POST | `/api/events` | Create event (admin only) |
+| PUT | `/api/events/:id` | Update event (admin only) |
+| DELETE | `/api/events/:id` | Delete event (admin only) |
+| GET | `/api/events/:id/photos` | List event photos |
+| POST | `/api/events/:id/photos` | Upload event photo (admin only) |
+| GET | `/api/events/:id/reviews` | List reviews |
+| POST | `/api/events/:id/reviews` | Submit review (registered student, completed event only) |
+| GET | `/api/colleges` | List active colleges |
+| GET | `/api/colleges/:id` | College detail with upcoming/past events |
+| GET | `/api/categories` | List event categories |
+| GET | `/api/bookmarks` | Student's bookmarked events |
+| POST | `/api/bookmarks/:eventId` | Add bookmark |
+| DELETE | `/api/bookmarks/:eventId` | Remove bookmark |
+| POST | `/api/events/:id/register` | Register for event (student) |
+| GET | `/api/student/registrations` | Student's registrations |
+| GET | `/api/admin/events` | Admin's events |
+| GET | `/api/admin/events/:id/registrations` | Event registrations (admin) |
+| PUT | `/api/admin/registrations/:id/status` | Approve/reject registration |
+| GET | `/api/superadmin/admins/pending` | Pending admin requests |
+| POST | `/api/superadmin/admins/:id/approve` | Approve admin |
+| POST | `/api/superadmin/admins/:id/reject` | Reject admin |
+| POST | `/api/superadmin/admins/:id/suspend` | Suspend admin |
+| GET | `/api/superadmin/stats` | Platform statistics |
 
-## Frontend Pages
+## Design System
 
-- `/` — Landing page with role selection cards
-- `/student/login`, `/student/signup`, `/student/dashboard`
-- `/admin/login`, `/admin/signup`, `/admin/pending`, `/admin/dashboard`
-- `/superadmin/login`, `/superadmin/dashboard`
-- `/verify-email` — Email verification page
+- **Theme:** Black background (`#0A0A0A`), gold primary (`hsl(43 74% 53%)`), dark card surfaces
+- **Font:** Display = Playfair Display (serif), Body = Inter (sans)
+- **CSS classes:** `gold-gradient-text`, `glass-panel` available globally
+- **Components:** Custom `ui-components.tsx` (Button, Card, Badge, Input, Select, Dialog, StarRating)
+
+## Error Handling
+
+API returns `{ error: "..." }` for errors. Frontend reads `error?.response?.data?.error`. The `getErrorMessage()` utility in `lib/utils.ts` handles this.
 
 ## Seeded Data
 
-8 colleges pre-seeded for development (IIT Delhi, IIT Bombay, Delhi University, etc.)
+- 8 colleges (IIT Delhi, Bombay, Madras, Kharagpur, Kanpur, Roorkee, Guwahati, Hyderabad)
+- 8 upcoming events across all colleges
+- 1 Super Admin account

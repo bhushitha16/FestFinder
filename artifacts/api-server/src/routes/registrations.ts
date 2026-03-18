@@ -104,6 +104,7 @@ router.get("/admin/events", async (req, res) => {
       eventDate: eventsTable.eventDate,
       registrationDeadline: eventsTable.registrationDeadline,
       maxParticipants: eventsTable.maxParticipants,
+      thumbnailUrl: eventsTable.thumbnailUrl,
       collegeId: eventsTable.collegeId,
       collegeName: collegesTable.name,
       createdAt: eventsTable.createdAt,
@@ -112,15 +113,18 @@ router.get("/admin/events", async (req, res) => {
     .innerJoin(collegesTable, eq(eventsTable.collegeId, collegesTable.id))
     .where(eq(eventsTable.collegeId, adminProfile[0].collegeId));
 
+  const now = new Date();
   const result = await Promise.all(
     events.map(async (event) => {
       const counts = await db.select({ count: count() }).from(registrationsTable).where(eq(registrationsTable.eventId, event.id));
       return {
         ...event,
+        thumbnailUrl: event.thumbnailUrl ?? null,
         eventDate: event.eventDate.toISOString(),
         registrationDeadline: event.registrationDeadline.toISOString(),
         createdAt: event.createdAt.toISOString(),
-        registeredCount: counts[0]?.count ?? 0,
+        registeredCount: Number(counts[0]?.count ?? 0),
+        eventStatus: event.eventDate < now ? "completed" : "upcoming",
       };
     })
   );

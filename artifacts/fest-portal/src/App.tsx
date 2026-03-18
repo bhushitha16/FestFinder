@@ -49,6 +49,10 @@ function Router() {
       <Route path="/superadmin/login" component={SuperAdminLogin} />
       <Route path="/superadmin/dashboard" component={SuperAdminDashboard} />
       
+      {/* Event & College Detail */}
+      <Route path="/events/:id" component={EventDetail} />
+      <Route path="/colleges/:id" component={CollegeDetail} />
+      
       {/* Shared */}
       <Route path="/verify-email" component={VerifyEmail} />
       

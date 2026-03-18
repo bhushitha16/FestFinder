@@ -17,15 +17,16 @@ export default function SuperAdminDashboard() {
   const { data: events = [] } = useGetAllEvents({ query: { enabled: activeTab === 'events' } });
 
   const queryClient = useQueryClient();
-  const approveMutation = useApproveAdmin({ onSuccess: () => invalidate() });
-  const rejectMutation = useRejectAdmin({ onSuccess: () => invalidate() });
-  const suspendMutation = useSuspendAdmin({ onSuccess: () => invalidate() });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/superadmin/admins/pending"] });
     queryClient.invalidateQueries({ queryKey: ["/api/superadmin/colleges"] });
     queryClient.invalidateQueries({ queryKey: ["/api/superadmin/stats"] });
   };
+
+  const approveMutation = useApproveAdmin({ mutation: { onSuccess: () => invalidate() } });
+  const rejectMutation = useRejectAdmin({ mutation: { onSuccess: () => invalidate() } });
+  const suspendMutation = useSuspendAdmin({ mutation: { onSuccess: () => invalidate() } });
 
   if (!user || user.role !== "super_admin") {
     return <AppLayout><div className="p-8 text-center">Unauthorized access</div></AppLayout>;
