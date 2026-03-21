@@ -1,4 +1,9 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
+console.log("DATABASE_URL:", process.env.DATABASE_URL);
 import app from "./app";
+console.log("Server starting...");
 
 const rawPort = process.env["PORT"];
 

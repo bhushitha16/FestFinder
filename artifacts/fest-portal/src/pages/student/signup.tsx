@@ -22,64 +22,163 @@ type SignupForm = z.infer<typeof signupSchema>;
 
 export default function StudentSignup() {
   const [, setLocation] = useLocation();
-  const { toast } = useToast();
-  
-  const { data: colleges = [], isLoading: loadingColleges } = useListColleges();
+  const toast = useToast().toast;
 
-  const { register, handleSubmit, formState: { errors } } = useForm<SignupForm>({
-    resolver: zodResolver(signupSchema)
+  // ✅ Fetch colleges safely
+  const { data, isLoading: loadingColleges } = useListColleges();
+
+  // ✅ Form setup
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignupForm>({
+    resolver: zodResolver(signupSchema),
   });
 
+  // ✅ Signup mutation
   const signupMutation = useStudentSignup({
     mutation: {
       onSuccess: () => {
-        toast({ title: "Registration successful!", description: "Your account is ready. Please log in." });
+        toast({
+          title: "Registration successful!",
+          description: "Your account is ready. Please log in.",
+        });
         setLocation("/student/login");
       },
-      onError: (err) => toast({ title: "Registration failed", description: getErrorMessage(err), variant: "destructive" })
-    }
+      onError: (err) =>
+        toast({
+          title: "Registration failed",
+          description: getErrorMessage(err),
+          variant: "destructive",
+        }),
+    },
   });
 
-  const collegeOptions = colleges.map(c => ({ value: c.id, label: c.name }));
+  const collegeOptions = (() => {
+    // Case 1: data is already an array
+    if (Array.isArray(data)) {
+      return data.map((c: any) => ({
+        value: c.id,
+        label: c.name,
+      }));
+    }
+
+    // Case 2: data is wrapped like { data: [...] }
+    if (Array.isArray((data as any)?.data)) {
+      return (data as any).data.map((c: any) => ({
+        value: c.id,
+        label: c.name,
+      }));
+    }
+
+    // Case 3: data is wrapped like { colleges: [...] }
+    if (Array.isArray((data as any)?.colleges)) {
+      return (data as any).colleges.map((c: any) => ({
+        value: c.id,
+        label: c.name,
+      }));
+    }
+
+    // Fallback
+    return [];
+  })();
 
   return (
     <AppLayout>
       <div className="flex-1 flex items-center justify-center p-4 py-12 relative">
         <Card className="w-full max-w-xl p-8 glass-panel border-t-primary/30 relative z-10">
+
+          {/* Header */}
           <div className="text-center mb-8">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20">
               <GraduationCap className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-2xl font-display font-semibold mb-2">Create Account</h1>
-            <p className="text-muted-foreground text-sm">Join the ultimate college fest network</p>
+            <h1 className="text-2xl font-display font-semibold mb-2">
+              Create Account
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Join the ultimate college fest network
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit((d) => signupMutation.mutate({ data: d }))} className="space-y-5">
-            <Input label="Full Name" placeholder="John Doe" {...register("fullName")} error={errors.fullName?.message} />
-            
+          {/* Form */}
+          <form
+            onSubmit={handleSubmit((d) =>
+              signupMutation.mutate({ data: d })
+            )}
+            className="space-y-5"
+          >
+            <Input
+              label="Full Name"
+              placeholder="John Doe"
+              {...register("fullName")}
+              error={errors.fullName?.message}
+            />
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input label="Contact Number" placeholder="1234567890" {...register("contactNumber")} error={errors.contactNumber?.message} />
-              <Select label="College" options={collegeOptions} disabled={loadingColleges} {...register("collegeId")} error={errors.collegeId?.message} />
+              <Input
+                label="Contact Number"
+                placeholder="1234567890"
+                {...register("contactNumber")}
+                error={errors.contactNumber?.message}
+              />
+
+              <Select
+                label="College"
+                options={collegeOptions}
+                disabled={loadingColleges}
+                {...register("collegeId")}
+                error={errors.collegeId?.message}
+              />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input label="College Email" type="email" placeholder="student@college.edu" {...register("collegeEmail")} error={errors.collegeEmail?.message} />
-              <Input label="College ID Number" placeholder="Ex: 2021ABC123" {...register("collegeIdNumber")} error={errors.collegeIdNumber?.message} />
-            </div>
-            
-            <Input label="Password" type="password" placeholder="Create a strong password" {...register("password")} error={errors.password?.message} />
+              <Input
+                label="College Email"
+                type="email"
+                placeholder="student@college.edu"
+                {...register("collegeEmail")}
+                error={errors.collegeEmail?.message}
+              />
 
-            <Button type="submit" className="w-full mt-4" size="lg" isLoading={signupMutation.isPending}>
+              <Input
+                label="College ID Number"
+                placeholder="Ex: 2021ABC123"
+                {...register("collegeIdNumber")}
+                error={errors.collegeIdNumber?.message}
+              />
+            </div>
+
+            <Input
+              label="Password"
+              type="password"
+              placeholder="Create a strong password"
+              {...register("password")}
+              error={errors.password?.message}
+            />
+
+            <Button
+              type="submit"
+              className="w-full mt-4"
+              size="lg"
+              isLoading={signupMutation.isPending}
+            >
               Create Account
             </Button>
           </form>
 
+          {/* Footer */}
           <div className="mt-8 text-center text-sm text-muted-foreground border-t border-white/5 pt-6">
             Already have an account?{" "}
-            <Link href="/student/login" className="text-primary hover:underline font-medium">
+            <Link
+              href="/student/login"
+              className="text-primary hover:underline font-medium"
+            >
               Sign in
             </Link>
           </div>
+
         </Card>
       </div>
     </AppLayout>
