@@ -5,6 +5,7 @@ import {
   hashPassword,
   verifyPassword,
   generateToken,
+  generateOTP,
   createSession,
   getSessionUser,
   setSessionCookie,
@@ -62,6 +63,8 @@ router.post("/student/signup", async (req, res) => {
   if (!colleges.length) return res.status(400).json({ error: "Invalid or unapproved college selected" });
 
   const passwordHash = hashPassword(password);
+  const emailVerifyToken = generateOTP();
+  const emailVerifyExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes for OTP
 
   const [user] = await db.insert(usersTable).values({
     email: collegeEmail,
@@ -70,7 +73,9 @@ router.post("/student/signup", async (req, res) => {
     contactNumber,
     role: "student",
     status: "active",
-    emailVerified: true,
+    emailVerified: false,
+    emailVerifyToken,
+    emailVerifyExpiry,
   }).returning();
 
   await db.insert(studentProfilesTable).values({
@@ -79,9 +84,41 @@ router.post("/student/signup", async (req, res) => {
     collegeIdNumber,
   });
 
+  console.log(`[OTP-VERIFY] Code for ${collegeEmail}: ${emailVerifyToken}`);
+
   return res.status(201).json({
-    message: "Registration successful! You can now log in.",
+    message: "Registration successful! Please enter the 6-digit OTP sent to your email.",
+    email: collegeEmail,
+    otp: process.env.NODE_ENV === "development" ? emailVerifyToken : undefined,
   });
+});
+
+// POST /api/auth/verify-otp
+router.post("/verify-otp", async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: "Email and OTP required" });
+
+  const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+  if (!users.length) return res.status(400).json({ error: "User not found" });
+
+  const user = users[0];
+  if (user.emailVerifyToken !== otp) {
+    return res.status(400).json({ error: "Invalid verification code" });
+  }
+
+  if (user.emailVerifyExpiry && user.emailVerifyExpiry < new Date()) {
+    return res.status(400).json({ error: "Verification code has expired" });
+  }
+
+  await db.update(usersTable).set({
+    emailVerified: true,
+    status: user.role === 'student' ? "active" : "pending_approval",
+    emailVerifyToken: null,
+    emailVerifyExpiry: null,
+    updatedAt: new Date(),
+  }).where(eq(usersTable.id, user.id));
+
+  return res.json({ message: "Verification successful! You can now log in." });
 });
 
 // GET /api/auth/verify-email
@@ -154,6 +191,9 @@ router.post("/admin/signup", async (req, res) => {
   if (existingAdmins.length) return res.status(409).json({ error: "This college already has an admin registered" });
 
   const passwordHash = hashPassword(password);
+  const emailVerifyToken = generateOTP();
+  const emailVerifyExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes for OTP
+
   const [user] = await db.insert(usersTable).values({
     email,
     passwordHash,
@@ -161,7 +201,9 @@ router.post("/admin/signup", async (req, res) => {
     contactNumber,
     role: "college_admin",
     status: "pending_approval",
-    emailVerified: true,
+    emailVerified: false,
+    emailVerifyToken,
+    emailVerifyExpiry,
   }).returning();
 
   await db.insert(adminProfilesTable).values({
@@ -170,8 +212,12 @@ router.post("/admin/signup", async (req, res) => {
     designation: designation || null,
   });
 
+  console.log(`[OTP-VERIFY] Code for ${email}: ${emailVerifyToken}`);
+
   return res.status(201).json({
-    message: "Registration submitted! Your account is pending Super Admin approval.",
+    message: "Registration submitted! Please verify your email first. Your account will then be pending Super Admin approval.",
+    email,
+    otp: process.env.NODE_ENV === "development" ? emailVerifyToken : undefined,
   });
 });
 
@@ -206,7 +252,10 @@ router.post("/admin/login", async (req, res) => {
 
 // POST /api/auth/superadmin/login
 router.post("/superadmin/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email: rawEmail, password: rawPassword } = req.body;
+  const email = rawEmail?.trim();
+  const password = rawPassword?.trim();
+
   if (!email || !password) return res.status(400).json({ error: "Email and password required" });
 
   // Check for hardcoded super admin or DB super admin
@@ -246,6 +295,55 @@ router.post("/logout", async (req, res) => {
   }
   clearSessionCookie(res);
   return res.json({ message: "Logged out successfully" });
+});
+
+// POST /api/auth/phone-verify
+// Receives the phone.email `user_json_url` from the frontend,
+// fetches the verified phone details from phone.email's server, and returns them.
+// This keeps the verification trusted (server-to-server) rather than relying on client-supplied data.
+router.post("/phone-verify", async (req, res) => {
+  const { user_json_url } = req.body as { user_json_url?: string };
+
+  if (!user_json_url) {
+    return res.status(400).json({ error: "user_json_url is required" });
+  }
+
+  // Only allow URLs from the official phone.email user JSON host for security.
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(user_json_url);
+  } catch {
+    return res.status(400).json({ error: "Invalid user_json_url" });
+  }
+
+  if (!parsedUrl.hostname.endsWith("phone.email")) {
+    return res.status(400).json({ error: "user_json_url must be from phone.email domain" });
+  }
+
+  try {
+    const response = await fetch(user_json_url);
+    if (!response.ok) {
+      return res.status(502).json({ error: "Failed to fetch verification data from phone.email" });
+    }
+    const data = await response.json() as {
+      user_country_code?: string;
+      user_phone_number?: string;
+      user_first_name?: string;
+      user_last_name?: string;
+    };
+
+    return res.json({
+      countryCode: data.user_country_code ?? "",
+      phoneNumber: data.user_phone_number ?? "",
+      firstName: data.user_first_name ?? "",
+      lastName: data.user_last_name ?? "",
+      // Provide a combined E.164-style phone number for convenience
+      fullPhone: `${data.user_country_code ?? ""}${data.user_phone_number ?? ""}`,
+    });
+  } catch (err) {
+    console.error("phone-verify fetch error:", err);
+    return res.status(502).json({ error: "Error communicating with phone.email" });
+  }
 });
 
 export default router;

@@ -28,9 +28,10 @@ export default function AdminSignup() {
 
   const signupMutation = useAdminSignup({
     mutation: {
-      onSuccess: () => {
-        toast({ title: "Application Submitted!", description: "Your request is pending Super Admin approval." });
-        setLocation("/admin/pending");
+      onSuccess: (data: any) => {
+        toast({ title: "Verification Required", description: "Please enter the OTP sent to your email." });
+        const email = data?.email || "";
+        setLocation(`/verify-otp?email=${encodeURIComponent(email)}`);
       },
       onError: (err) => toast({ title: "Application failed", description: getErrorMessage(err), variant: "destructive" })
     }
@@ -54,12 +55,12 @@ export default function AdminSignup() {
               <Input label="Official Email" type="email" placeholder="admin@college.edu" {...register("email")} error={errors.email?.message} />
             </div>
             <Input label="College / Institution Name" placeholder="e.g. National Institute of Technology" {...register("collegeName")} error={errors.collegeName?.message} />
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <Input label="Contact Number" placeholder="1234567890" {...register("contactNumber")} error={errors.contactNumber?.message} />
               <Input label="Designation (Optional)" placeholder="e.g. Cultural Secretary" {...register("designation")} error={errors.designation?.message} />
             </div>
-            
+
             <Input label="Password" type="password" placeholder="Create a strong password" {...register("password")} error={errors.password?.message} />
 
             <Button type="submit" variant="secondary" className="w-full mt-4" size="lg" isLoading={signupMutation.isPending}>

@@ -19,6 +19,10 @@ export function generateToken(length = 32): string {
   return crypto.randomBytes(length).toString("hex");
 }
 
+export function generateOTP(digits = 6): string {
+  return Math.floor(10 ** (digits - 1) + Math.random() * 9 * 10 ** (digits - 1)).toString();
+}
+
 export async function createSession(userId: number): Promise<string> {
   const token = generateToken(32);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days

@@ -16,6 +16,7 @@ import AdminDashboard from "./pages/admin/dashboard";
 import SuperAdminLogin from "./pages/superadmin/login";
 import SuperAdminDashboard from "./pages/superadmin/dashboard";
 import VerifyEmail from "./pages/verify-email";
+import VerifyOtp from "./pages/verify-otp";
 import EventDetail from "./pages/events/detail";
 import CollegeDetail from "./pages/colleges/detail";
 import NotFound from "./pages/not-found";
@@ -33,29 +34,30 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
-      
+
       {/* Student Routes */}
       <Route path="/student/login" component={StudentLogin} />
       <Route path="/student/signup" component={StudentSignup} />
       <Route path="/student/dashboard" component={StudentDashboard} />
-      
+
       {/* College Admin Routes */}
       <Route path="/admin/login" component={AdminLogin} />
       <Route path="/admin/signup" component={AdminSignup} />
       <Route path="/admin/pending" component={AdminPending} />
       <Route path="/admin/dashboard" component={AdminDashboard} />
-      
+
       {/* Super Admin Routes */}
       <Route path="/superadmin/login" component={SuperAdminLogin} />
       <Route path="/superadmin/dashboard" component={SuperAdminDashboard} />
-      
+
       {/* Event & College Detail */}
       <Route path="/events/:id" component={EventDetail} />
       <Route path="/colleges/:id" component={CollegeDetail} />
-      
+
       {/* Shared */}
+      <Route path="/verify-otp" component={VerifyOtp} />
       <Route path="/verify-email" component={VerifyEmail} />
-      
+
       <Route component={NotFound} />
     </Switch>
   );

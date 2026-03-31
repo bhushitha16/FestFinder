@@ -25,10 +25,36 @@ function isUrl(input: RequestInfo | URL): input is URL {
   return typeof URL !== "undefined" && input instanceof URL;
 }
 
+function getBaseUrl(): string {
+  // In Vite-bundled code, import.meta.env is available at build time.
+  // We fall back gracefully when running in environments that don't have it.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const env = (import.meta as any)?.env;
+    const backendUrl: string | undefined = env?.VITE_BACKEND_URL;
+    if (backendUrl) return backendUrl.replace(/\/$/, "");
+  } catch {
+    // ignore
+  }
+  return "";
+}
+
 function resolveUrl(input: RequestInfo | URL): string {
   if (typeof input === "string") return input;
   if (isUrl(input)) return input.toString();
   return input.url;
+}
+
+/**
+ * Prepend the backend base URL to relative paths (e.g. /api/auth/me).
+ * Absolute URLs are returned unchanged.
+ */
+function toAbsoluteUrl(input: RequestInfo | URL): RequestInfo | URL {
+  const raw = resolveUrl(input);
+  if (/^https?:\/\//i.test(raw)) return input; // already absolute
+  const base = getBaseUrl();
+  if (!base) return input; // no base configured — leave as-is (e.g. same-origin proxy)
+  return base + raw;
 }
 
 function mergeHeaders(...sources: Array<HeadersInit | undefined>): Headers {
@@ -56,11 +82,11 @@ function isJsonMediaType(mediaType: string | null): boolean {
 function isTextMediaType(mediaType: string | null): boolean {
   return Boolean(
     mediaType &&
-      (mediaType.startsWith("text/") ||
-        mediaType === "application/xml" ||
-        mediaType === "text/xml" ||
-        mediaType.endsWith("+xml") ||
-        mediaType === "application/x-www-form-urlencoded"),
+    (mediaType.startsWith("text/") ||
+      mediaType === "application/xml" ||
+      mediaType === "text/xml" ||
+      mediaType.endsWith("+xml") ||
+      mediaType === "application/x-www-form-urlencoded"),
   );
 }
 
@@ -167,7 +193,7 @@ export class ResponseParseError extends Error {
   ) {
     super(
       `Failed to parse response from ${requestInfo.method} ${response.url || requestInfo.url} ` +
-        `(${response.status} ${response.statusText}) as JSON`,
+      `(${response.status} ${response.statusText}) as JSON`,
     );
     Object.setPrototypeOf(this, new.target.prototype);
 
@@ -264,7 +290,7 @@ async function parseSuccessBody(
       if (typeof response.blob !== "function") {
         throw new TypeError(
           "Blob responses are not supported in this runtime. " +
-            "Use responseType \"json\" or \"text\" instead.",
+          "Use responseType \"json\" or \"text\" instead.",
         );
       }
       return response.blob();
@@ -277,13 +303,16 @@ export async function customFetch<T = unknown>(
 ): Promise<T> {
   const { responseType = "auto", headers: headersInit, ...init } = options;
 
-  const method = resolveMethod(input, init.method);
+  // Resolve relative paths (e.g. /api/auth/me) to the configured backend URL.
+  const resolvedInput = toAbsoluteUrl(input);
+
+  const method = resolveMethod(resolvedInput, init.method);
 
   if (init.body != null && (method === "GET" || method === "HEAD")) {
     throw new TypeError(`customFetch: ${method} requests cannot have a body.`);
   }
 
-  const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
+  const headers = mergeHeaders(isRequest(resolvedInput) ? resolvedInput.headers : undefined, headersInit);
 
   if (
     typeof init.body === "string" &&
@@ -297,9 +326,10 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  const requestInfo = { method, url: resolveUrl(input) };
+  const requestInfo = { method, url: resolveUrl(resolvedInput) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  // credentials: "include" ensures session cookies are sent cross-origin.
+  const response = await fetch(resolvedInput, { credentials: "include", ...init, method, headers });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

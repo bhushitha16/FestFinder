@@ -70,7 +70,15 @@ export default defineConfig(async ({ mode }) => {
     server: {
       port,
       host: "0.0.0.0",
+      strictPort: true,
       allowedHosts: true,
+      proxy: {
+        // Forward API requests to the backend server
+        "/api": {
+          target: "http://127.0.0.1:5000",
+          changeOrigin: true,
+        },
+      },
       fs: {
         strict: true,
         deny: ["**/.*"],
