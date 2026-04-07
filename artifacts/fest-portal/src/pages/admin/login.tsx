@@ -4,15 +4,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AppLayout } from "@/components/layout";
 import { Card, Input, Button } from "@/components/ui-components";
-import { useAdminLogin } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { getErrorMessage } from "@/lib/utils";
-import { Building2 } from "lucide-react";
+import { Building2, Mail, ArrowRight, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email"),
-  password: z.string().min(1, "Password is required"),
+const emailSchema = z.object({
+  email: z.string().email("Please enter a valid admin email"),
+});
+
+const otpSchema = z.object({
+  otp: z.string().length(6, "OTP must be exactly 6 digits"),
 });
 
 export default function AdminLogin() {
@@ -20,20 +22,69 @@ export default function AdminLogin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema)
+  const [step, setStep] = useState<"email" | "otp">("email");
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { register: registerEmail, handleSubmit: handleEmailSubmit, formState: { errors: emailErrors } } = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema)
   });
 
-  const loginMutation = useAdminLogin({
-    mutation: {
-      onSuccess: () => {
-        toast({ title: "Welcome back!", description: "Successfully logged in as Admin." });
+  const { register: registerOtp, handleSubmit: handleOtpSubmit, formState: { errors: otpErrors } } = useForm<z.infer<typeof otpSchema>>({
+    resolver: zodResolver(otpSchema)
+  });
+
+  const onEmailSubmit = async (data: z.infer<typeof emailSchema>) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/auth/admin/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email }),
+      });
+      const resData = await response.json();
+      if (response.ok) {
+        toast({ title: "OTP Sent", description: resData.message });
+        setEmail(data.email);
+        setStep("otp");
+      } else {
+        toast({ title: "Error", description: resData.error || "Failed to send OTP", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Network error", description: "Could not reach server.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onOtpSubmit = async (data: z.infer<typeof otpSchema>) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/auth/admin/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: data.otp }),
+      });
+      const resData = await response.json();
+      
+      // If 401 but indicates "pending Super Admin approval", we should tell them and maybe redirect or wait
+      if (response.status === 401 && resData.error.includes("pending Super Admin approval")) {
+         toast({ title: "Account Pending", description: resData.error });
+         setLocation("/");
+      }
+      else if (response.ok) {
+        toast({ title: "Welcome back!", description: resData.message });
         queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
         setLocation("/admin/dashboard");
-      },
-      onError: (err) => toast({ title: "Login Failed", description: getErrorMessage(err), variant: "destructive" })
+      } else {
+        toast({ title: "Login Failed", description: resData.error || "Invalid OTP", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Network error", description: "Could not reach server.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-  });
+  };
 
   return (
     <AppLayout>
@@ -44,16 +95,50 @@ export default function AdminLogin() {
               <Building2 className="w-6 h-6 text-foreground" />
             </div>
             <h1 className="text-2xl font-display font-semibold mb-2">College Admin</h1>
-            <p className="text-muted-foreground text-sm">Manage your institution's events</p>
+            <p className="text-muted-foreground text-sm">Manage your institution's events without a password</p>
           </div>
 
-          <form onSubmit={handleSubmit((d) => loginMutation.mutate({ data: d }))} className="space-y-5">
-            <Input label="Admin Email" type="email" placeholder="admin@college.edu" {...register("email")} error={errors.email?.message} />
-            <Input label="Password" type="password" placeholder="••••••••" {...register("password")} error={errors.password?.message} />
-            <Button type="submit" className="w-full mt-2" size="lg" variant="secondary" isLoading={loginMutation.isPending}>
-              Sign In
-            </Button>
-          </form>
+          {step === "email" ? (
+            <form onSubmit={handleEmailSubmit(onEmailSubmit)} className="space-y-5 animate-in fade-in slide-in-from-bottom-2">
+              <Input 
+                label="Admin Email" 
+                type="email" 
+                placeholder="admin@college.edu" 
+                icon={<Mail className="w-4 h-4" />}
+                {...registerEmail("email")} 
+                error={emailErrors.email?.message} 
+              />
+              <Button type="submit" className="w-full mt-2 group" size="lg" variant="secondary" isLoading={isLoading}>
+                Continue <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleOtpSubmit(onOtpSubmit)} className="space-y-5 animate-in fade-in slide-in-from-right-4">
+              <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-xl">
+                 <p className="text-sm font-medium text-center">Enter the 6-digit code sent to</p>
+                 <p className="text-primary font-bold text-center mt-1">{email}</p>
+                 <button 
+                  type="button" 
+                  onClick={() => setStep("email")}
+                  className="text-xs text-muted-foreground hover:text-white mx-auto block mt-2 underline"
+                 >Change email</button>
+              </div>
+
+              <Input 
+                autoFocus
+                label="Security Code" 
+                placeholder="123456" 
+                maxLength={6}
+                className="text-center letter-spacing-[0.5em] text-2xl font-display font-bold py-6"
+                {...registerOtp("otp")} 
+                error={otpErrors.otp?.message} 
+              />
+              
+              <Button type="submit" className="w-full mt-4" size="lg" variant="secondary" isLoading={isLoading}>
+                Verify & Login
+              </Button>
+            </form>
+          )}
 
           <div className="mt-8 text-center text-sm text-muted-foreground border-t border-white/5 pt-6">
             New institution?{" "}

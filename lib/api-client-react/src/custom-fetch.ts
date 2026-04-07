@@ -26,9 +26,21 @@ function isUrl(input: RequestInfo | URL): input is URL {
 }
 
 function resolveUrl(input: RequestInfo | URL): string {
-  if (typeof input === "string") return input;
-  if (isUrl(input)) return input.toString();
-  return input.url;
+  const baseURL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || "";
+  let url = "";
+
+  if (typeof input === "string") {
+    url = input;
+  } else if (isUrl(input)) {
+    url = input.toString();
+  } else {
+    url = input.url;
+  }
+
+  if (url.startsWith("/") && baseURL) {
+    return `${baseURL.replace(/\/$/, "")}${url}`;
+  }
+  return url;
 }
 
 function mergeHeaders(...sources: Array<HeadersInit | undefined>): Headers {
@@ -297,9 +309,10 @@ export async function customFetch<T = unknown>(
     headers.set("accept", DEFAULT_JSON_ACCEPT);
   }
 
-  const requestInfo = { method, url: resolveUrl(input) };
+  const url = resolveUrl(input);
+  const requestInfo = { method, url };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const response = await fetch(url, { ...init, method, headers });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

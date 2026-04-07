@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, registrationsTable, eventsTable, studentProfilesTable, usersTable, adminProfilesTable, collegesTable } from "@workspace/db";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, inArray } from "drizzle-orm";
 import { getSessionUser } from "../lib/auth.js";
 
 const router = Router();
@@ -175,7 +175,130 @@ router.get("/admin/events/:eventId/registrations", async (req, res) => {
   return res.json(result);
 });
 
-// PUT /api/admin/registrations/:registrationId/status
+// GET /api/admin/events/:eventId/registrations/export
+router.get("/admin/events/:eventId/registrations/export", async (req, res) => {
+  const user = await getSessionUser(req);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  if (user.role !== "college_admin") return res.status(403).json({ error: "Forbidden" });
+
+  const eventId = parseInt(req.params.eventId);
+  const adminProfile = await db.select().from(adminProfilesTable).where(eq(adminProfilesTable.userId, user.id)).limit(1);
+  const events = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
+  if (!events.length) return res.status(404).json({ error: "Event not found" });
+  if (!adminProfile.length || adminProfile[0].collegeId !== events[0].collegeId) {
+    return res.status(403).json({ error: "Not your event" });
+  }
+
+  const registrations = await db
+    .select({
+      id: registrationsTable.id,
+      status: registrationsTable.status,
+      registeredAt: registrationsTable.registeredAt,
+      studentName: usersTable.fullName,
+      studentEmail: usersTable.email,
+      studentId: registrationsTable.studentId,
+    })
+    .from(registrationsTable)
+    .innerJoin(usersTable, eq(registrationsTable.studentId, usersTable.id))
+    .where(eq(registrationsTable.eventId, eventId));
+
+  const result = await Promise.all(
+    registrations.map(async (r) => {
+      const profile = await db.select().from(studentProfilesTable).where(eq(studentProfilesTable.userId, r.studentId)).limit(1);
+      return {
+        "Registration ID": r.id,
+        "Student Name": r.studentName,
+        "Email": r.studentEmail,
+        "College ID Number": profile[0]?.collegeIdNumber ?? "N/A",
+        "Status": r.status,
+        "Registered At": r.registeredAt.toISOString(),
+      };
+    })
+  );
+
+  const headers = ["Registration ID", "Student Name", "Email", "College ID Number", "Status", "Registered At"];
+  const csvRows = [
+    headers.join(","),
+    ...result.map(row => headers.map(header => `"${String((row as any)[header]).replace(/"/g, '""')}"`).join(","))
+  ];
+
+  const csvString = csvRows.join("\n");
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="event-${eventId}-registrations.csv"`);
+  return res.send(csvString);
+});
+
+// GET /api/admin/registrations/export (bulk export for multiple or all events)
+router.get("/admin/registrations/export", async (req, res) => {
+  const user = await getSessionUser(req);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  if (user.role !== "college_admin") return res.status(403).json({ error: "Forbidden" });
+
+  const adminProfile = await db.select().from(adminProfilesTable).where(eq(adminProfilesTable.userId, user.id)).limit(1);
+  if (!adminProfile.length || !adminProfile[0].collegeId) {
+    return res.status(403).json({ error: "No college associated" });
+  }
+  const collegeId = adminProfile[0].collegeId;
+
+  // Let's get the eventIds if provided
+  const eventIdsParam = req.query.eventIds as string | undefined;
+  
+  // Get all events for the college
+  const allEventsForCollege = await db.select({ id: eventsTable.id, title: eventsTable.title }).from(eventsTable).where(eq(eventsTable.collegeId, collegeId));
+  const validEventIds = new Set(allEventsForCollege.map(e => e.id));
+  const eventTitleMap = new Map(allEventsForCollege.map(e => [e.id, e.title]));
+
+  let targetEventIds: number[] = [];
+  if (eventIdsParam) {
+    targetEventIds = eventIdsParam.split(",").map(Number).filter(id => validEventIds.has(id));
+  } else {
+    targetEventIds = Array.from(validEventIds);
+  }
+
+  if (targetEventIds.length === 0) {
+     return res.status(400).json({ error: "No valid events found to export." });
+  }
+
+  const registrations = await db
+    .select({
+      id: registrationsTable.id,
+      eventId: registrationsTable.eventId,
+      status: registrationsTable.status,
+      registeredAt: registrationsTable.registeredAt,
+      studentName: usersTable.fullName,
+      studentEmail: usersTable.email,
+      studentId: registrationsTable.studentId,
+    })
+    .from(registrationsTable)
+    .innerJoin(usersTable, eq(registrationsTable.studentId, usersTable.id))
+    .where(inArray(registrationsTable.eventId, targetEventIds));
+
+  const result = await Promise.all(
+    registrations.map(async (r) => {
+      const profile = await db.select().from(studentProfilesTable).where(eq(studentProfilesTable.userId, r.studentId)).limit(1);
+      return {
+        "Event Title": eventTitleMap.get(r.eventId) ?? "Unknown Event",
+        "Registration ID": r.id,
+        "Student Name": r.studentName,
+        "Email": r.studentEmail,
+        "College ID Number": profile[0]?.collegeIdNumber ?? "N/A",
+        "Status": r.status,
+        "Registered At": r.registeredAt.toISOString(),
+      };
+    })
+  );
+
+  const headers = ["Event Title", "Registration ID", "Student Name", "Email", "College ID Number", "Status", "Registered At"];
+  const csvRows = [
+    headers.join(","),
+    ...result.map(row => headers.map(header => `"${String((row as any)[header]).replace(/"/g, '""')}"`).join(","))
+  ];
+
+  const csvString = csvRows.join("\n");
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename="bulk-registrations.csv"`);
+  return res.send(csvString);
+});
 router.put("/admin/registrations/:registrationId/status", async (req, res) => {
   const user = await getSessionUser(req);
   if (!user) return res.status(401).json({ error: "Unauthorized" });

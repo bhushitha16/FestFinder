@@ -476,7 +476,13 @@ export const GetPendingAdminsResponseItem = zod.object({
   collegeName: zod.string(),
   contactNumber: zod.string(),
   designation: zod.string().nullish(),
-  status: zod.enum(["pending", "approved", "rejected", "suspended"]),
+  status: zod.enum([
+    "pending_verification",
+    "active",
+    "pending_approval",
+    "rejected",
+    "suspended",
+  ]),
   createdAt: zod.date(),
 });
 export const GetPendingAdminsResponse = zod.array(GetPendingAdminsResponseItem);
@@ -492,7 +498,13 @@ export const ApproveAdminResponse = zod.object({
   collegeName: zod.string(),
   contactNumber: zod.string(),
   designation: zod.string().nullish(),
-  status: zod.enum(["pending", "approved", "rejected", "suspended"]),
+  status: zod.enum([
+    "pending_verification",
+    "active",
+    "pending_approval",
+    "rejected",
+    "suspended",
+  ]),
   createdAt: zod.date(),
 });
 
@@ -507,7 +519,13 @@ export const RejectAdminResponse = zod.object({
   collegeName: zod.string(),
   contactNumber: zod.string(),
   designation: zod.string().nullish(),
-  status: zod.enum(["pending", "approved", "rejected", "suspended"]),
+  status: zod.enum([
+    "pending_verification",
+    "active",
+    "pending_approval",
+    "rejected",
+    "suspended",
+  ]),
   createdAt: zod.date(),
 });
 
@@ -522,7 +540,13 @@ export const SuspendAdminResponse = zod.object({
   collegeName: zod.string(),
   contactNumber: zod.string(),
   designation: zod.string().nullish(),
-  status: zod.enum(["pending", "approved", "rejected", "suspended"]),
+  status: zod.enum([
+    "pending_verification",
+    "active",
+    "pending_approval",
+    "rejected",
+    "suspended",
+  ]),
   createdAt: zod.date(),
 });
 

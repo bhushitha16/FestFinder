@@ -141,7 +141,7 @@ export default function AdminDashboard() {
             <div>
                <Card className="sticky top-28 p-8 glass-panel border-t-primary/30">
                  <h3 className="text-xl font-display font-semibold mb-6">Quick Stats</h3>
-                 <div className="space-y-4">
+                 <div className="space-y-4 mb-6">
                    <div className="bg-background/50 p-5 rounded-xl border border-white/5">
                      <p className="text-sm text-muted-foreground font-medium mb-1 uppercase tracking-wider">Total Events</p>
                      <p className="text-4xl font-display font-bold text-primary">{events.length}</p>
@@ -153,6 +153,12 @@ export default function AdminDashboard() {
                      </p>
                    </div>
                  </div>
+                 <ExportRegistrationsDialog events={events} />
+               </Card>
+               <Card className="sticky top-[380px] p-8 glass-panel border-t-destructive/50 mt-8 bg-destructive/5">
+                 <h3 className="text-xl font-display font-semibold mb-4 text-destructive">Danger Zone</h3>
+                 <p className="text-sm text-white/70 mb-6">If you wish to exit the platform and erase all your college data permanently, you can delete your account here. This action is irreversible.</p>
+                 <ExitPlatformDialog events={events} />
                </Card>
             </div>
           </div>
@@ -365,6 +371,11 @@ function EventRegistrationsView({ eventId, onBack, eventTitle }: { eventId: numb
           <h2 className="text-2xl font-display font-semibold">Registrations</h2>
           <p className="text-primary text-sm mt-1">{eventTitle}</p>
         </div>
+        <div className="ml-auto">
+          <Button onClick={() => window.location.href = `/api/admin/events/${eventId}/registrations/export`} className="gap-2">
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       <Card className="overflow-hidden p-0 border-white/10">
@@ -411,5 +422,115 @@ function EventRegistrationsView({ eventId, onBack, eventTitle }: { eventId: numb
         </div>
       </Card>
     </div>
+  );
+}
+
+function ExitPlatformDialog({ events }: { events: Event[] }) {
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const totalEvents = events.length;
+  const totalRegistrations = events.reduce((acc, curr) => acc + curr.registeredCount, 0);
+
+  const handleExit = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/colleges/me", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete data");
+      
+      toast({ title: "College data erased completely. Exiting..." });
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <>
+      <Button variant="destructive" className="w-full" onClick={() => setIsOpen(true)}>
+        Exit Platform & Erase Data
+      </Button>
+      <Dialog isOpen={isOpen} onClose={() => !isDeleting && setIsOpen(false)} title="Review and Delete Data">
+        <div className="space-y-6">
+          <p className="text-sm text-white/70">
+            You are about to permanently exit the platform. Please review the data that will be deleted along with your college account. This action is irreversible.
+          </p>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-5 space-y-3">
+            <div className="flex justify-between items-center text-sm">
+              <span className="font-semibold text-white/90">Total Events to Delete:</span>
+              <span className="text-white text-base font-bold">{totalEvents}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="font-semibold text-white/90">Total Registrations to Delete:</span>
+              <span className="text-white text-base font-bold">{totalRegistrations}</span>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+            <Button type="button" variant="ghost" onClick={() => setIsOpen(false)} disabled={isDeleting}>Cancel</Button>
+            <Button variant="destructive" isLoading={isDeleting} onClick={handleExit}>Confirm and Delete Forever</Button>
+          </div>
+        </div>
+      </Dialog>
+    </>
+  );
+}
+
+function ExportRegistrationsDialog({ events }: { events: Event[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const toggleEvent = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]);
+  };
+
+  const handleExport = () => {
+    const url = selectedIds.length === 0 
+      ? "/api/admin/registrations/export" 
+      : `/api/admin/registrations/export?eventIds=${selectedIds.join(",")}`;
+    window.location.href = url;
+    setIsOpen(false);
+  };
+
+  return (
+    <>
+      <Button className="w-full" variant="outline" onClick={() => setIsOpen(true)}>
+        Export Registrations
+      </Button>
+      <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)} title="Export Event Registrations">
+        <div className="space-y-4">
+          <p className="text-sm text-white/70 mb-2">Select the events to export registrations for. If no events are selected, all college registrations will be exported.</p>
+          <div className="max-h-[300px] overflow-y-auto space-y-2 border border-white/5 bg-black/20 rounded-lg p-3">
+            {events.length === 0 ? <p className="text-sm text-muted-foreground p-2">No events available.</p> : null}
+            {events.map(event => (
+              <label key={event.id} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-md cursor-pointer transition-colors">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 rounded border-white/20 bg-black/50 text-primary focus:ring-primary/50 focus:ring-offset-0" 
+                  checked={selectedIds.includes(event.id)}
+                  onChange={() => toggleEvent(event.id)}
+                />
+                <div className="flex-1 flex justify-between items-center text-sm">
+                  <span className="text-white/90">{event.title}</span>
+                  <Badge variant="outline" className="text-[10px]">{event.registeredCount} Regs</Badge>
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-between items-center pt-4 border-t border-white/5">
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(events.map(e => e.id))}>Select All</Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>Cancel</Button>
+              <Button onClick={handleExport}>
+                {selectedIds.length === 0 ? "Export All" : `Export Selected (${selectedIds.length})`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
+    </>
   );
 }

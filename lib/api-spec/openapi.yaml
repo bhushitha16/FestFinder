@@ -1117,7 +1117,7 @@ components:
           nullable: true
         status:
           type: string
-          enum: [pending, approved, rejected, suspended]
+          enum: [pending_verification, active, pending_approval, rejected, suspended]
         createdAt:
           type: string
           format: date-time

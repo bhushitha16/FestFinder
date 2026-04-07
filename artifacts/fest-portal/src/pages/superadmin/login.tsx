@@ -4,10 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AppLayout } from "@/components/layout";
 import { Card, Input, Button } from "@/components/ui-components";
-import { useSuperAdminLogin } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { getErrorMessage } from "@/lib/utils";
 import { Crown } from "lucide-react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 const loginSchema = z.object({
@@ -19,21 +18,36 @@ export default function SuperAdminLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [isLoading, setIsLoading] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema)
   });
 
-  const loginMutation = useSuperAdminLogin({
-    mutation: {
-      onSuccess: () => {
+  const onSubmit = async (data: z.infer<typeof loginSchema>) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/auth/superadmin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const resData = await response.json();
+
+      if (response.ok) {
         toast({ title: "Authorized", description: "Super Admin access granted." });
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+        queryClient.setQueryData(["/api/auth/me"], resData.user);
         setLocation("/superadmin/dashboard");
-      },
-      onError: (err) => toast({ title: "Access Denied", description: getErrorMessage(err), variant: "destructive" })
+      } else {
+        toast({ title: "Access Denied", description: resData.error || "Login Failed", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Network error", description: "Could not reach server.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-  });
+  };
 
   return (
     <AppLayout>
@@ -49,10 +63,10 @@ export default function SuperAdminLogin() {
             <p className="text-muted-foreground text-xs mt-2 uppercase tracking-widest">Restricted Access</p>
           </div>
 
-          <form onSubmit={handleSubmit((d) => loginMutation.mutate({ data: d }))} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <Input label="Master Email" type="email" placeholder="admin@system.local" {...register("email")} error={errors.email?.message} />
             <Input label="Master Password" type="password" placeholder="••••••••" {...register("password")} error={errors.password?.message} />
-            <Button type="submit" className="w-full mt-2 tracking-widest uppercase" size="lg" isLoading={loginMutation.isPending}>
+            <Button type="submit" className="w-full mt-2 tracking-widest uppercase" size="lg" isLoading={isLoading}>
               Authenticate
             </Button>
           </form>

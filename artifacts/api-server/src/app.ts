@@ -10,6 +10,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+console.log("Mounting /api routes...");
 app.use("/api", router);
+console.log("Routes mounted.");
 
 export default app;

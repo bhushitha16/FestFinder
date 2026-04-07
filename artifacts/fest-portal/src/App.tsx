@@ -16,6 +16,7 @@ import AdminDashboard from "./pages/admin/dashboard";
 import SuperAdminLogin from "./pages/superadmin/login";
 import SuperAdminDashboard from "./pages/superadmin/dashboard";
 import VerifyEmail from "./pages/verify-email";
+import ForgotPassword from "./pages/auth/forgot-password";
 import EventDetail from "./pages/events/detail";
 import CollegeDetail from "./pages/colleges/detail";
 import NotFound from "./pages/not-found";
@@ -55,6 +56,7 @@ function Router() {
       
       {/* Shared */}
       <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/forgot-password" component={ForgotPassword} />
       
       <Route component={NotFound} />
     </Switch>

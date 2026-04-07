@@ -10,8 +10,9 @@ export type AdminUserStatus =
   (typeof AdminUserStatus)[keyof typeof AdminUserStatus];
 
 export const AdminUserStatus = {
-  pending: "pending",
-  approved: "approved",
+  pending_verification: "pending_verification",
+  active: "active",
+  pending_approval: "pending_approval",
   rejected: "rejected",
   suspended: "suspended",
 } as const;

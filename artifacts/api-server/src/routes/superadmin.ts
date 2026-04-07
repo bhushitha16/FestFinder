@@ -12,7 +12,7 @@ router.use(async (req, res, next) => {
     return res.status(403).json({ error: "Super admin access required" });
   }
   (req as any).superAdmin = user;
-  next();
+  return next();
 });
 
 // GET /api/superadmin/admins/pending

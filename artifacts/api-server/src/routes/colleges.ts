@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { db, collegesTable, adminProfilesTable, usersTable, eventsTable, registrationsTable, reviewsTable } from "@workspace/db";
+import { db, collegesTable, adminProfilesTable, usersTable, eventsTable, registrationsTable, reviewsTable, eventPhotosTable } from "@workspace/db";
 import { eq, and, count, avg, lt, gte, inArray } from "drizzle-orm";
+import { getSessionUser } from "../lib/auth.js";
 
 const router = Router();
 
@@ -105,6 +106,45 @@ router.get("/:collegeId", async (req, res) => {
     pastEvents: allEvents.filter((e) => e.eventDate < n).map(serializeEvent),
     createdAt: college.createdAt.toISOString(),
   });
+});
+
+// DELETE /api/colleges/me — college exit platform
+router.delete("/me", async (req, res) => {
+  const user = await getSessionUser(req);
+  if (!user || user.role !== "college_admin") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const [adminProfile] = await db.select().from(adminProfilesTable).where(eq(adminProfilesTable.userId, user.id)).limit(1);
+  if (!adminProfile || !adminProfile.collegeId) {
+    return res.status(403).json({ error: "No college associated" });
+  }
+
+  const collegeId = adminProfile.collegeId;
+
+  // 1. Delete all events related stuff
+  const events = await db.select({ id: eventsTable.id }).from(eventsTable).where(eq(eventsTable.collegeId, collegeId));
+  const eventIds = events.map(e => e.id);
+
+  if (eventIds.length > 0) {
+    await db.delete(eventPhotosTable).where(inArray(eventPhotosTable.eventId, eventIds));
+    await db.delete(reviewsTable).where(inArray(reviewsTable.eventId, eventIds));
+    await db.delete(registrationsTable).where(inArray(registrationsTable.eventId, eventIds));
+    await db.delete(eventsTable).where(eq(eventsTable.collegeId, collegeId));
+  }
+
+  // 2. Delete admins
+  const admins = await db.select({ userId: adminProfilesTable.userId }).from(adminProfilesTable).where(eq(adminProfilesTable.collegeId, collegeId));
+  const adminIds = admins.map(a => a.userId);
+  await db.delete(adminProfilesTable).where(eq(adminProfilesTable.collegeId, collegeId));
+  if (adminIds.length > 0) {
+     await db.delete(usersTable).where(inArray(usersTable.id, adminIds));
+  }
+
+  // 3. Delete college
+  await db.delete(collegesTable).where(eq(collegesTable.id, collegeId));
+
+  return res.json({ message: "College data completely erased." });
 });
 
 export default router;

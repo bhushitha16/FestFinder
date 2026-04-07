@@ -8,13 +8,13 @@ import { useState } from "react";
 import { format } from "date-fns";
 
 export default function SuperAdminDashboard() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<"pending" | "colleges" | "events">("pending");
   
   const { data: stats } = useGetPlatformStats();
-  const { data: pendingAdmins = [] } = useGetPendingAdmins();
-  const { data: colleges = [] } = useGetAllColleges({ query: { enabled: activeTab === 'colleges' } });
-  const { data: events = [] } = useGetAllEvents({ query: { enabled: activeTab === 'events' } });
+  const { data: pendingAdmins = [] } = useGetPendingAdmins({ query: { queryKey: ["/api/superadmin/admins/pending"], enabled: activeTab === 'pending' } });
+  const { data: colleges = [] } = useGetAllColleges({ query: { queryKey: ["/api/superadmin/colleges"], enabled: activeTab === 'colleges' } });
+  const { data: events = [] } = useGetAllEvents({ query: { queryKey: ["/api/superadmin/events"], enabled: activeTab === 'events' } });
 
   const queryClient = useQueryClient();
 
@@ -28,8 +28,12 @@ export default function SuperAdminDashboard() {
   const rejectMutation = useRejectAdmin({ mutation: { onSuccess: () => invalidate() } });
   const suspendMutation = useSuspendAdmin({ mutation: { onSuccess: () => invalidate() } });
 
+  if (isLoading) {
+    return <AppLayout><div className="p-8 text-center text-muted-foreground animate-pulse">Verifying credentials...</div></AppLayout>;
+  }
+
   if (!user || user.role !== "super_admin") {
-    return <AppLayout><div className="p-8 text-center">Unauthorized access</div></AppLayout>;
+    return <AppLayout><div className="p-8 text-center text-destructive border border-destructive/20 rounded-lg m-8 bg-destructive/10">Unauthorized access. Please log in as a platform administrator.</div></AppLayout>;
   }
 
   return (

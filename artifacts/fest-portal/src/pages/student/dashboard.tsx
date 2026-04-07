@@ -9,7 +9,7 @@ import { Search } from "lucide-react";
 import type { ListEventsStatus } from "@workspace/api-client-react/src/generated/api.schemas";
 
 export default function StudentDashboard() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<"discover" | "my-registrations" | "bookmarks">("discover");
   
@@ -20,22 +20,27 @@ export default function StudentDashboard() {
   const { data: categories = [] } = useListCategories();
 
   const { data: events = [], isLoading: loadingEvents } = useListEvents({ 
-    query: { enabled: activeTab === "discover" },
     search: search || undefined,
     category: category || undefined,
     status: statusFilter && statusFilter !== "all" ? statusFilter as ListEventsStatus : undefined
+  }, {
+    query: { queryKey: ["/api/events", search, category, statusFilter], enabled: activeTab === "discover" }
   });
   
   const { data: registrations = [], isLoading: loadingRegs } = useGetStudentRegistrations({
-    query: { enabled: activeTab === "my-registrations" }
+    query: { queryKey: ["/api/student/registrations"], enabled: activeTab === "my-registrations" }
   });
 
   const { data: bookmarks = [], isLoading: loadingBookmarks } = useGetBookmarks({
-    query: { enabled: activeTab === "bookmarks" }
+    query: { queryKey: ["/api/student/bookmarks"], enabled: activeTab === "bookmarks" }
   });
 
+  if (isLoading) {
+    return <AppLayout><div className="p-8 text-center text-muted-foreground animate-pulse">Verifying credentials...</div></AppLayout>;
+  }
+
   if (!user || user.role !== "student") {
-    return <AppLayout><div className="p-8 text-center">Unauthorized access</div></AppLayout>;
+    return <AppLayout><div className="p-8 text-center text-destructive border border-destructive/20 rounded-lg m-8 bg-destructive/10">Unauthorized access. Please log in as a student.</div></AppLayout>;
   }
 
   const categoryOptions = categories.map(c => ({ value: c, label: c }));

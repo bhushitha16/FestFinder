@@ -6,3 +6,4 @@ export * from "./sessions";
 export * from "./event_photos";
 export * from "./bookmarks";
 export * from "./reviews";
+export * from "./auth_attempts";
