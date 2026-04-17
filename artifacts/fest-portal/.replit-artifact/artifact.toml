@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "College Fest Portal"
+version = "1.0.0"
+id = "artifacts/fest-portal"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 23683
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/fest-portal run dev"
+
+[services.env]
+PORT = "23683"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/fest-portal", "run", "build"]
+publicDir = "artifacts/fest-portal/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"

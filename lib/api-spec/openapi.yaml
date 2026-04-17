@@ -1,0 +1,1225 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: College Fest Portal API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: auth
+  - name: colleges
+  - name: events
+  - name: registrations
+  - name: admin
+  - name: bookmarks
+  - name: reviews
+  - name: photos
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/student/signup:
+    post:
+      operationId: studentSignup
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentSignupRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/student/login:
+    post:
+      operationId: studentLogin
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/admin/signup:
+    post:
+      operationId: adminSignup
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSignupRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/admin/login:
+    post:
+      operationId: adminLogin
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/superadmin/login:
+    post:
+      operationId: superAdminLogin
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-email:
+    get:
+      operationId: verifyEmail
+      tags: [auth]
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserInfo"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [events]
+      summary: List event categories
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /colleges:
+    get:
+      operationId: listColleges
+      tags: [colleges]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/College"
+
+  /colleges/{collegeId}:
+    get:
+      operationId: getCollege
+      tags: [colleges]
+      parameters:
+        - name: collegeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CollegeDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events:
+    get:
+      operationId: listEvents
+      tags: [events]
+      parameters:
+        - name: college_id
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [upcoming, completed]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+    post:
+      operationId: createEvent
+      tags: [events]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{eventId}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: updateEvent
+      tags: [events]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteEvent
+      tags: [events]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{eventId}/register:
+    post:
+      operationId: registerForEvent
+      tags: [registrations]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+        "400":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{eventId}/photos:
+    get:
+      operationId: getEventPhotos
+      tags: [photos]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventPhoto"
+
+    post:
+      operationId: addEventPhoto
+      tags: [photos]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/AddPhotoRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventPhoto"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /events/{eventId}/photos/{photoId}:
+    delete:
+      operationId: deleteEventPhoto
+      tags: [photos]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: photoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /events/{eventId}/reviews:
+    get:
+      operationId: getEventReviews
+      tags: [reviews]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+
+    post:
+      operationId: addEventReview
+      tags: [reviews]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddReviewRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "400":
+          description: Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookmarks:
+    get:
+      operationId: getBookmarks
+      tags: [bookmarks]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+  /bookmarks/{eventId}:
+    post:
+      operationId: addBookmark
+      tags: [bookmarks]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: removeBookmark
+      tags: [bookmarks]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/events:
+    get:
+      operationId: getAdminEvents
+      tags: [events]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+  /admin/events/{eventId}/registrations:
+    get:
+      operationId: getEventRegistrations
+      tags: [registrations]
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Registration"
+
+  /admin/registrations/{registrationId}/status:
+    put:
+      operationId: updateRegistrationStatus
+      tags: [registrations]
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatusRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+
+  /student/registrations:
+    get:
+      operationId: getStudentRegistrations
+      tags: [registrations]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Registration"
+
+  /superadmin/admins/pending:
+    get:
+      operationId: getPendingAdmins
+      tags: [admin]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+
+  /superadmin/admins/{adminId}/approve:
+    put:
+      operationId: approveAdmin
+      tags: [admin]
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /superadmin/admins/{adminId}/reject:
+    put:
+      operationId: rejectAdmin
+      tags: [admin]
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /superadmin/admins/{adminId}/suspend:
+    put:
+      operationId: suspendAdmin
+      tags: [admin]
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+
+  /superadmin/stats:
+    get:
+      operationId: getPlatformStats
+      tags: [admin]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformStats"
+
+  /superadmin/colleges:
+    get:
+      operationId: getAllColleges
+      tags: [admin]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/College"
+
+  /superadmin/events:
+    get:
+      operationId: getAllEvents
+      tags: [admin]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserInfo"
+      required: [message]
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [student, college_admin, super_admin]
+        status:
+          type: string
+        collegeId:
+          type: integer
+          nullable: true
+        collegeName:
+          type: string
+          nullable: true
+      required: [id, email, name, role, status]
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    StudentSignupRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        contactNumber:
+          type: string
+        collegeId:
+          type: integer
+        collegeEmail:
+          type: string
+          format: email
+        collegeIdNumber:
+          type: string
+        password:
+          type: string
+      required: [fullName, contactNumber, collegeId, collegeEmail, collegeIdNumber, password]
+
+    AdminSignupRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        collegeName:
+          type: string
+        contactNumber:
+          type: string
+        designation:
+          type: string
+        password:
+          type: string
+      required: [fullName, email, collegeName, contactNumber, password]
+
+    College:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, suspended]
+        adminName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, status, createdAt]
+
+    CollegeDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+        adminName:
+          type: string
+          nullable: true
+        upcomingEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        pastEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, status, upcomingEvents, pastEvents, createdAt]
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        venue:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        registrationDeadline:
+          type: string
+          format: date-time
+        maxParticipants:
+          type: integer
+          nullable: true
+        registeredCount:
+          type: integer
+        thumbnailUrl:
+          type: string
+          nullable: true
+        parentEventId:
+          type: integer
+          nullable: true
+        previousEventId:
+          type: integer
+          nullable: true
+        eventStatus:
+          type: string
+          enum: [upcoming, completed]
+        collegeId:
+          type: integer
+        collegeName:
+          type: string
+        averageRating:
+          type: number
+          nullable: true
+        reviewCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, title, description, category, venue, eventDate, registrationDeadline, collegeId, collegeName, registeredCount, eventStatus, reviewCount, createdAt]
+
+    EventDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        venue:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        registrationDeadline:
+          type: string
+          format: date-time
+        maxParticipants:
+          type: integer
+          nullable: true
+        registeredCount:
+          type: integer
+        thumbnailUrl:
+          type: string
+          nullable: true
+        parentEventId:
+          type: integer
+          nullable: true
+        previousEventId:
+          type: integer
+          nullable: true
+        eventStatus:
+          type: string
+          enum: [upcoming, completed]
+        collegeId:
+          type: integer
+        collegeName:
+          type: string
+        averageRating:
+          type: number
+          nullable: true
+        reviewCount:
+          type: integer
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventPhoto"
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+        subEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, title, description, category, venue, eventDate, registrationDeadline, collegeId, collegeName, registeredCount, eventStatus, reviewCount, photos, reviews, createdAt]
+
+    CreateEventRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        venue:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        registrationDeadline:
+          type: string
+          format: date-time
+        maxParticipants:
+          type: integer
+          nullable: true
+        thumbnail:
+          type: string
+          format: binary
+          nullable: true
+        parentEventId:
+          type: integer
+          nullable: true
+        previousEventId:
+          type: integer
+          nullable: true
+      required: [title, description, category, venue, eventDate, registrationDeadline]
+
+    Registration:
+      type: object
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        eventTitle:
+          type: string
+        studentId:
+          type: integer
+        studentName:
+          type: string
+        studentEmail:
+          type: string
+        studentCollegeIdNumber:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        registeredAt:
+          type: string
+          format: date-time
+      required: [id, eventId, eventTitle, studentId, studentName, studentEmail, studentCollegeIdNumber, status, registeredAt]
+
+    UpdateStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected]
+      required: [status]
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        collegeName:
+          type: string
+        contactNumber:
+          type: string
+        designation:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending_verification, active, pending_approval, rejected, suspended]
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, email, collegeName, contactNumber, status, createdAt]
+
+    PlatformStats:
+      type: object
+      properties:
+        totalStudents:
+          type: integer
+        totalColleges:
+          type: integer
+        totalEvents:
+          type: integer
+        totalRegistrations:
+          type: integer
+        pendingAdminRequests:
+          type: integer
+      required: [totalStudents, totalColleges, totalEvents, totalRegistrations, pendingAdminRequests]
+
+    EventPhoto:
+      type: object
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        photoUrl:
+          type: string
+        caption:
+          type: string
+          nullable: true
+        uploadedAt:
+          type: string
+          format: date-time
+      required: [id, eventId, photoUrl, uploadedAt]
+
+    AddPhotoRequest:
+      type: object
+      properties:
+        photos:
+          type: array
+          items:
+            type: string
+            format: binary
+        caption:
+          type: string
+          nullable: true
+      required: [photos]
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        eventId:
+          type: integer
+        studentId:
+          type: integer
+        studentName:
+          type: string
+        rating:
+          type: integer
+        review:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, eventId, studentId, studentName, rating, createdAt]
+
+    AddReviewRequest:
+      type: object
+      properties:
+        rating:
+          type: integer
+        review:
+          type: string
+          nullable: true
+      required: [rating]
