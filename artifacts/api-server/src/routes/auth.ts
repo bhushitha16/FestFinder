@@ -18,193 +18,224 @@ const authRouter = Router();
 authRouter.get("/ping", (req, res) => res.json({ message: "pong" }));
 
 async function checkLoginAttempts(email: string, ip: string | undefined) {
-  const today = new Date().toISOString().split('T')[0];
-  const attempts = await db.select()
-    .from(loginAttemptsTable)
-    .where(and(eq(loginAttemptsTable.email, email), eq(loginAttemptsTable.date, today)))
-    .limit(1);
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const attempts = await db.select()
+      .from(loginAttemptsTable)
+      .where(and(eq(loginAttemptsTable.email, email), eq(loginAttemptsTable.date, today)))
+      .limit(1);
 
-  if (attempts.length && attempts[0].attemptCount >= 3) {
-    return false;
+    if (attempts.length && attempts[0].attemptCount >= 3) {
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Error checking login attempts:", err);
+    return true; // Don't block on DB error
   }
-  return true;
 }
 
 async function recordFailedAttempt(email: string, ip: string | undefined) {
-  const today = new Date().toISOString().split('T')[0];
-  const attempts = await db.select()
-    .from(loginAttemptsTable)
-    .where(and(eq(loginAttemptsTable.email, email), eq(loginAttemptsTable.date, today)))
-    .limit(1);
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const attempts = await db.select()
+      .from(loginAttemptsTable)
+      .where(and(eq(loginAttemptsTable.email, email), eq(loginAttemptsTable.date, today)))
+      .limit(1);
 
-  if (attempts.length) {
-    await db.update(loginAttemptsTable)
-      .set({ 
-        attemptCount: attempts[0].attemptCount + 1,
-        lastAttemptAt: new Date(),
-        ipAddress: ip || attempts[0].ipAddress
-      })
-      .where(eq(loginAttemptsTable.id, attempts[0].id));
-  } else {
-    await db.insert(loginAttemptsTable).values({
-      email,
-      ipAddress: ip,
-      date: today,
-      attemptCount: 1,
-    });
+    if (attempts.length) {
+      await db.update(loginAttemptsTable)
+        .set({ 
+          attemptCount: attempts[0].attemptCount + 1,
+          lastAttemptAt: new Date(),
+          ipAddress: ip || attempts[0].ipAddress
+        })
+        .where(eq(loginAttemptsTable.id, attempts[0].id));
+    } else {
+      await db.insert(loginAttemptsTable).values({
+        email,
+        ipAddress: ip,
+        date: today,
+        attemptCount: 1,
+      });
+    }
+  } catch (err) {
+    console.error("Error recording failed attempt:", err);
   }
 }
 
 async function clearLoginAttempts(email: string) {
-  const today = new Date().toISOString().split('T')[0];
-  await db.update(loginAttemptsTable)
-    .set({ attemptCount: 0 })
-    .where(and(eq(loginAttemptsTable.email, email), eq(loginAttemptsTable.date, today)));
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    await db.update(loginAttemptsTable)
+      .set({ attemptCount: 0 })
+      .where(and(eq(loginAttemptsTable.email, email), eq(loginAttemptsTable.date, today)));
+  } catch (err) {
+    console.error("Error clearing login attempts:", err);
+  }
 }
 
 // GET /api/auth/me
-authRouter.get("/me", async (req, res) => {
-  const user = await getSessionUser(req);
-  if (!user) return res.status(401).json({ error: "Unauthorized" });
+authRouter.get("/me", async (req, res, next) => {
+  try {
+    const user = await getSessionUser(req);
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
 
-  let collegeId: number | null = null;
-  let collegeName: string | null = null;
+    let collegeId: number | null = null;
+    let collegeName: string | null = null;
 
-  if (user.role === "student") {
+    if (user.role === "student") {
+      const profiles = await db.select().from(studentProfilesTable).where(eq(studentProfilesTable.userId, user.id)).limit(1);
+      if (profiles.length) {
+        collegeId = profiles[0].collegeId;
+        const colleges = await db.select().from(collegesTable).where(eq(collegesTable.id, collegeId)).limit(1);
+        if (colleges.length) collegeName = colleges[0].name;
+      }
+    } else if (user.role === "college_admin") {
+      const profiles = await db.select().from(adminProfilesTable).where(eq(adminProfilesTable.userId, user.id)).limit(1);
+      if (profiles.length) {
+        collegeId = profiles[0].collegeId ?? null;
+        collegeName = profiles[0].collegeName;
+      }
+    }
+
+    return res.json({
+      id: user.id,
+      email: user.email,
+      name: user.fullName,
+      role: user.role,
+      status: user.status,
+      collegeId,
+      collegeName,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/student/signup
+authRouter.post("/student/signup", async (req, res, next) => {
+  try {
+    const { fullName, contactNumber, collegeId, collegeEmail, collegeIdNumber } = req.body;
+    if (!fullName || !collegeId || !collegeEmail || !collegeIdNumber) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const existing = await db.select().from(usersTable).where(eq(usersTable.email, collegeEmail)).limit(1);
+    if (existing.length) return res.status(409).json({ error: "Email already registered" });
+
+    // Verify college exists and is active
+    const colleges = await db.select().from(collegesTable).where(and(eq(collegesTable.id, collegeId), eq(collegesTable.status, "active"))).limit(1);
+    if (!colleges.length) return res.status(400).json({ error: "Invalid or unapproved college selected" });
+
+    const passwordHash = hashPassword(generateToken(16)); // Dummy password
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    const [user] = await db.insert(usersTable).values({
+      email: collegeEmail,
+      passwordHash,
+      fullName,
+      contactNumber,
+      role: "student",
+      status: "active",
+      emailVerified: false,
+      emailVerifyToken: otp,
+      emailVerifyExpiry: expiry,
+    }).returning();
+
+    if (!user) throw new Error("Failed to create user");
+
+    await db.insert(studentProfilesTable).values({
+      userId: user.id,
+      collegeId,
+      collegeIdNumber,
+    });
+
+    try {
+      await sendOTP(collegeEmail, otp);
+      return res.status(201).json({ message: "Registration successful! OTP sent to your email for verification." });
+    } catch (error) {
+      console.error("Error in signup send-otp:", error);
+      return res.status(201).json({ message: "Registered, but failed to send OTP email. Please use Forgot Password or Resend OTP if available." });
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/auth/verify-email
+authRouter.get("/verify-email", async (req, res, next) => {
+  try {
+    const { token } = req.query as { token: string };
+    if (!token) return res.status(400).json({ error: "Token required" });
+
+    const users = await db.select().from(usersTable).where(eq(usersTable.emailVerifyToken, token)).limit(1);
+    if (!users.length) return res.status(400).json({ error: "Invalid verification token" });
+
+    const user = users[0];
+    if (user.emailVerifyExpiry && user.emailVerifyExpiry < new Date()) {
+      return res.status(400).json({ error: "Verification token has expired" });
+    }
+
+    await db.update(usersTable).set({
+      emailVerified: true,
+      status: "active",
+      emailVerifyToken: null,
+      emailVerifyExpiry: null,
+      updatedAt: new Date(),
+    }).where(eq(usersTable.id, user.id));
+
+    return res.json({ message: "Email verified successfully! You can now log in." });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/auth/student/login
+authRouter.post("/student/login", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: "Email and password required" });
+
+    const canAttempt = await checkLoginAttempts(email, req.ip);
+    if (!canAttempt) return res.status(429).json({ error: "Too many failed login attempts. Please try again tomorrow." });
+
+    const users = await db.select().from(usersTable).where(and(eq(usersTable.email, email), eq(usersTable.role, "student"))).limit(1);
+    
+    if (!users.length) {
+      await recordFailedAttempt(email, req.ip);
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const user = users[0];
+    if (!verifyPassword(password, user.passwordHash)) {
+      await recordFailedAttempt(email, req.ip);
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+    if (!user.emailVerified) return res.status(401).json({ error: "Please verify your email before logging in" });
+    if (user.status !== "active") return res.status(401).json({ error: "Your account is not active" });
+
+    const token = await createSession(user.id);
+    setSessionCookie(res, token);
+    await clearLoginAttempts(email);
+
+    let collegeId: number | null = null;
+    let collegeName: string | null = null;
     const profiles = await db.select().from(studentProfilesTable).where(eq(studentProfilesTable.userId, user.id)).limit(1);
     if (profiles.length) {
       collegeId = profiles[0].collegeId;
       const colleges = await db.select().from(collegesTable).where(eq(collegesTable.id, collegeId)).limit(1);
       if (colleges.length) collegeName = colleges[0].name;
     }
-  } else if (user.role === "college_admin") {
-    const profiles = await db.select().from(adminProfilesTable).where(eq(adminProfilesTable.userId, user.id)).limit(1);
-    if (profiles.length) {
-      collegeId = profiles[0].collegeId ?? null;
-      collegeName = profiles[0].collegeName;
-    }
+
+    return res.json({
+      message: "Login successful",
+      user: { id: user.id, email: user.email, name: user.fullName, role: user.role, status: user.status, collegeId, collegeName },
+    });
+  } catch (err) {
+    next(err);
   }
-
-  return res.json({
-    id: user.id,
-    email: user.email,
-    name: user.fullName,
-    role: user.role,
-    status: user.status,
-    collegeId,
-    collegeName,
-  });
-});
-
-// POST /api/auth/student/signup
-authRouter.post("/student/signup", async (req, res) => {
-  const { fullName, contactNumber, collegeId, collegeEmail, collegeIdNumber } = req.body;
-  if (!fullName || !collegeId || !collegeEmail || !collegeIdNumber) {
-    return res.status(400).json({ error: "Missing required fields" });
-  }
-
-  const existing = await db.select().from(usersTable).where(eq(usersTable.email, collegeEmail)).limit(1);
-  if (existing.length) return res.status(409).json({ error: "Email already registered" });
-
-  // Verify college exists and is active
-  const colleges = await db.select().from(collegesTable).where(and(eq(collegesTable.id, collegeId), eq(collegesTable.status, "active"))).limit(1);
-  if (!colleges.length) return res.status(400).json({ error: "Invalid or unapproved college selected" });
-
-  const passwordHash = hashPassword(generateToken(16)); // Dummy password
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-  const [user] = await db.insert(usersTable).values({
-    email: collegeEmail,
-    passwordHash,
-    fullName,
-    contactNumber,
-    role: "student",
-    status: "active",
-    emailVerified: false,
-    emailVerifyToken: otp,
-    emailVerifyExpiry: expiry,
-  }).returning();
-
-  await db.insert(studentProfilesTable).values({
-    userId: user.id,
-    collegeId,
-    collegeIdNumber,
-  });
-
-  try {
-    await sendOTP(collegeEmail, otp);
-    return res.status(201).json({ message: "Registration successful! OTP sent to your email for verification." });
-  } catch (error) {
-    console.error("Error in signup send-otp:", error);
-    return res.status(500).json({ error: "Registered, but failed to send OTP email." });
-  }
-});
-
-// GET /api/auth/verify-email
-authRouter.get("/verify-email", async (req, res) => {
-  const { token } = req.query as { token: string };
-  if (!token) return res.status(400).json({ error: "Token required" });
-
-  const users = await db.select().from(usersTable).where(eq(usersTable.emailVerifyToken, token)).limit(1);
-  if (!users.length) return res.status(400).json({ error: "Invalid verification token" });
-
-  const user = users[0];
-  if (user.emailVerifyExpiry && user.emailVerifyExpiry < new Date()) {
-    return res.status(400).json({ error: "Verification token has expired" });
-  }
-
-  await db.update(usersTable).set({
-    emailVerified: true,
-    status: "active",
-    emailVerifyToken: null,
-    emailVerifyExpiry: null,
-    updatedAt: new Date(),
-  }).where(eq(usersTable.id, user.id));
-
-  return res.json({ message: "Email verified successfully! You can now log in." });
-});
-
-// POST /api/auth/student/login
-authRouter.post("/student/login", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: "Email and password required" });
-
-  const canAttempt = await checkLoginAttempts(email, req.ip);
-  if (!canAttempt) return res.status(429).json({ error: "Too many failed login attempts. Please try again tomorrow." });
-
-  const users = await db.select().from(usersTable).where(and(eq(usersTable.email, email), eq(usersTable.role, "student"))).limit(1);
-  
-  if (!users.length) {
-    await recordFailedAttempt(email, req.ip);
-    return res.status(401).json({ error: "Invalid email or password" });
-  }
-
-  const user = users[0];
-  if (!verifyPassword(password, user.passwordHash)) {
-    await recordFailedAttempt(email, req.ip);
-    return res.status(401).json({ error: "Invalid email or password" });
-  }
-  if (!user.emailVerified) return res.status(401).json({ error: "Please verify your email before logging in" });
-  if (user.status !== "active") return res.status(401).json({ error: "Your account is not active" });
-
-  const token = await createSession(user.id);
-  setSessionCookie(res, token);
-  await clearLoginAttempts(email);
-
-  let collegeId: number | null = null;
-  let collegeName: string | null = null;
-  const profiles = await db.select().from(studentProfilesTable).where(eq(studentProfilesTable.userId, user.id)).limit(1);
-  if (profiles.length) {
-    collegeId = profiles[0].collegeId;
-    const colleges = await db.select().from(collegesTable).where(eq(collegesTable.id, collegeId)).limit(1);
-    if (colleges.length) collegeName = colleges[0].name;
-  }
-
-  return res.json({
-    message: "Login successful",
-    user: { id: user.id, email: user.email, name: user.fullName, role: user.role, status: user.status, collegeId, collegeName },
-  });
 });
 
 // POST /api/auth/admin/signup
@@ -272,6 +303,8 @@ authRouter.post("/admin/signup", async (req, res, next) => {
       emailVerifyToken: otp,
       emailVerifyExpiry: expiry,
     }).returning();
+    
+    if (!user) throw new Error("Failed to create admin user");
     userId = user.id;
 
     await db.insert(adminProfilesTable).values({
@@ -285,190 +318,210 @@ authRouter.post("/admin/signup", async (req, res, next) => {
     await sendOTP(email, otp);
     return res.status(201).json({ message: "Registration submitted! OTP sent to verify your email." });
   } catch (error) {
-    return res.status(500).json({ error: "Registered, but failed to send OTP email." });
+    return res.status(201).json({ message: "Registered, but failed to send OTP email. Please try to login to resend OTP." });
   }
   } catch (err: any) {
-    console.error("Unhandled error in /admin/signup:", err);
-    return res.status(500).json({ error: "Internal Server Error: " + err.message });
+    next(err);
   }
 });
 
 // POST /api/auth/admin/send-otp
-authRouter.post("/admin/send-otp", async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: "Email is required" });
-
-  const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (!users.length) {
-    return res.status(404).json({ error: "No admin account found with this email." });
-  }
-
-  const user = users[0];
-  if (user.role !== "college_admin") {
-    return res.status(403).json({ error: "This login is for college admins only." });
-  }
-
-  // Check login attempts
-  const canAttempt = await checkLoginAttempts(email, req.ip);
-  if (!canAttempt) return res.status(429).json({ error: "Too many attempts. Please try again tomorrow." });
-
-  // Generate OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-  await db.update(usersTable).set({
-    emailVerifyToken: otp,
-    emailVerifyExpiry: expiry,
-  }).where(eq(usersTable.id, user.id));
-
+authRouter.post("/admin/send-otp", async (req, res, next) => {
   try {
-    await sendOTP(email, otp);
-    return res.json({ message: "OTP sent successfully to your email." });
-  } catch (error) {
-    console.error("Error in send-otp:", error);
-    return res.status(500).json({ error: "Failed to send OTP email. Please try again later." });
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (!users.length) {
+      return res.status(404).json({ error: "No admin account found with this email." });
+    }
+
+    const user = users[0];
+    if (user.role !== "college_admin") {
+      return res.status(403).json({ error: "This login is for college admins only." });
+    }
+
+    // Check login attempts
+    const canAttempt = await checkLoginAttempts(email, req.ip);
+    if (!canAttempt) return res.status(429).json({ error: "Too many attempts. Please try again tomorrow." });
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await db.update(usersTable).set({
+      emailVerifyToken: otp,
+      emailVerifyExpiry: expiry,
+    }).where(eq(usersTable.id, user.id));
+
+    try {
+      await sendOTP(email, otp);
+      return res.json({ message: "OTP sent successfully to your email." });
+    } catch (error) {
+      console.error("Error in send-otp:", error);
+      return res.status(500).json({ error: "Failed to send OTP email. Please try again later." });
+    }
+  } catch (err) {
+    next(err);
   }
 });
 
 // POST /api/auth/admin/verify-otp
-authRouter.post("/admin/verify-otp", async (req, res) => {
-  const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+authRouter.post("/admin/verify-otp", async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
 
-  const users = await db.select().from(usersTable).where(and(eq(usersTable.email, email), eq(usersTable.role, "college_admin"))).limit(1);
-  if (!users.length) return res.status(404).json({ error: "Admin account not found" });
+    const users = await db.select().from(usersTable).where(and(eq(usersTable.email, email), eq(usersTable.role, "college_admin"))).limit(1);
+    if (!users.length) return res.status(404).json({ error: "Admin account not found" });
 
-  const user = users[0];
-  if (user.emailVerifyToken !== otp) {
-    await recordFailedAttempt(email, req.ip);
-    return res.status(401).json({ error: "Invalid OTP" });
+    const user = users[0];
+    if (user.emailVerifyToken !== otp) {
+      await recordFailedAttempt(email, req.ip);
+      return res.status(401).json({ error: "Invalid OTP" });
+    }
+
+    if (user.emailVerifyExpiry && user.emailVerifyExpiry < new Date()) {
+      return res.status(401).json({ error: "OTP has expired" });
+    }
+
+    // Verify email
+    await db.update(usersTable).set({
+      emailVerifyToken: null,
+      emailVerifyExpiry: null,
+      emailVerified: true,
+    }).where(eq(usersTable.id, user.id));
+    
+    if (user.status === "pending_approval") {
+      return res.status(401).json({ error: "Email verified successfully! However, your account is still pending Super Admin approval." });
+    }
+    if (user.status === "rejected") return res.status(401).json({ error: "Your account request has been rejected." });
+
+    const token = await createSession(user.id);
+    setSessionCookie(res, token);
+    await clearLoginAttempts(email);
+
+    let collegeId: number | null = null;
+    let collegeName: string | null = null;
+    const profiles = await db.select().from(adminProfilesTable).where(eq(adminProfilesTable.userId, user.id)).limit(1);
+    if (profiles.length) {
+      collegeId = profiles[0].collegeId;
+      collegeName = profiles[0].collegeName;
+    }
+
+    return res.json({
+      message: "Login successful",
+      user: { id: user.id, email: user.email, name: user.fullName, role: user.role, status: user.status, collegeId, collegeName },
+    });
+  } catch (err) {
+    next(err);
   }
-
-  if (user.emailVerifyExpiry && user.emailVerifyExpiry < new Date()) {
-    return res.status(401).json({ error: "OTP has expired" });
-  }
-
-  // Verify email
-  await db.update(usersTable).set({
-    emailVerifyToken: null,
-    emailVerifyExpiry: null,
-    emailVerified: true,
-  }).where(eq(usersTable.id, user.id));
-  
-  if (user.status === "pending_approval") {
-    return res.status(401).json({ error: "Email verified successfully! However, your account is still pending Super Admin approval." });
-  }
-  if (user.status === "rejected") return res.status(401).json({ error: "Your account request has been rejected." });
-
-  const token = await createSession(user.id);
-  setSessionCookie(res, token);
-  await clearLoginAttempts(email);
-
-  let collegeId: number | null = null;
-  let collegeName: string | null = null;
-  const profiles = await db.select().from(adminProfilesTable).where(eq(adminProfilesTable.userId, user.id)).limit(1);
-  if (profiles.length) {
-    collegeId = profiles[0].collegeId;
-    collegeName = profiles[0].collegeName;
-  }
-
-  return res.json({
-    message: "Login successful",
-    user: { id: user.id, email: user.email, name: user.fullName, role: user.role, status: user.status, collegeId, collegeName },
-  });
 });
 
 // POST /api/auth/admin/login
-authRouter.post("/admin/login", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: "Email and password required" });
+authRouter.post("/admin/login", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: "Email and password required" });
 
-  const canAttempt = await checkLoginAttempts(email, req.ip);
-  if (!canAttempt) return res.status(429).json({ error: "Too many failed login attempts. Please try again tomorrow." });
+    const canAttempt = await checkLoginAttempts(email, req.ip);
+    if (!canAttempt) return res.status(429).json({ error: "Too many failed login attempts. Please try again tomorrow." });
 
-  const users = await db.select().from(usersTable).where(and(eq(usersTable.email, email), eq(usersTable.role, "college_admin"))).limit(1);
-  
-  if (!users.length) {
-    await recordFailedAttempt(email, req.ip);
-    return res.status(401).json({ error: "Invalid email or password" });
+    const users = await db.select().from(usersTable).where(and(eq(usersTable.email, email), eq(usersTable.role, "college_admin"))).limit(1);
+    
+    if (!users.length) {
+      await recordFailedAttempt(email, req.ip);
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    const user = users[0];
+    if (!verifyPassword(password, user.passwordHash)) {
+      await recordFailedAttempt(email, req.ip);
+      return res.status(401).json({ error: "Invalid email or password" });
+    }
+
+    if (user.status === "pending_approval") return res.status(401).json({ error: "Your account is pending Super Admin approval" });
+    if (user.status === "rejected") return res.status(401).json({ error: "Your account request has been rejected" });
+    if (user.status === "suspended") return res.status(401).json({ error: "Your account has been suspended" });
+    if (user.status !== "active") return res.status(401).json({ error: "Your account is not active" });
+
+    const token = await createSession(user.id);
+    setSessionCookie(res, token);
+    await clearLoginAttempts(email);
+
+    const profiles = await db.select().from(adminProfilesTable).where(eq(adminProfilesTable.userId, user.id)).limit(1);
+    const collegeId = profiles.length ? profiles[0].collegeId : null;
+    const collegeName = profiles.length ? profiles[0].collegeName : null;
+
+    return res.json({
+      message: "Login successful",
+      user: { id: user.id, email: user.email, name: user.fullName, role: user.role, status: user.status, collegeId, collegeName },
+    });
+  } catch (err) {
+    next(err);
   }
-
-  const user = users[0];
-  if (!verifyPassword(password, user.passwordHash)) {
-    await recordFailedAttempt(email, req.ip);
-    return res.status(401).json({ error: "Invalid email or password" });
-  }
-
-  if (user.status === "pending_approval") return res.status(401).json({ error: "Your account is pending Super Admin approval" });
-  if (user.status === "rejected") return res.status(401).json({ error: "Your account request has been rejected" });
-  if (user.status === "suspended") return res.status(401).json({ error: "Your account has been suspended" });
-  if (user.status !== "active") return res.status(401).json({ error: "Your account is not active" });
-
-  const token = await createSession(user.id);
-  setSessionCookie(res, token);
-  await clearLoginAttempts(email);
-
-  const profiles = await db.select().from(adminProfilesTable).where(eq(adminProfilesTable.userId, user.id)).limit(1);
-  const collegeId = profiles.length ? profiles[0].collegeId : null;
-  const collegeName = profiles.length ? profiles[0].collegeName : null;
-
-  return res.json({
-    message: "Login successful",
-    user: { id: user.id, email: user.email, name: user.fullName, role: user.role, status: user.status, collegeId, collegeName },
-  });
 });
 
 // POST /api/auth/superadmin/login
-authRouter.post("/superadmin/login", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: "Email and password required" });
+authRouter.post("/superadmin/login", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: "Email and password required" });
 
-  // Check for hardcoded super admin or DB super admin
-  const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || "superadmin@festportal.com";
-  const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || "superadmin123";
+    // Check for hardcoded super admin or DB super admin
+    const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || "superadmin@festportal.com";
+    const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || "superadmin123";
 
-  if (email === SUPER_ADMIN_EMAIL && password === SUPER_ADMIN_PASSWORD) {
-    // Ensure super admin exists in DB
-    let superAdmins = await db.select().from(usersTable).where(eq(usersTable.email, SUPER_ADMIN_EMAIL)).limit(1);
-    if (!superAdmins.length) {
-      const [created] = await db.insert(usersTable).values({
-        email: SUPER_ADMIN_EMAIL,
-        passwordHash: hashPassword(SUPER_ADMIN_PASSWORD),
-        fullName: "Super Admin",
-        role: "super_admin",
-        status: "active",
-        emailVerified: true,
-      }).returning();
-      superAdmins = [created];
+    if (email === SUPER_ADMIN_EMAIL && password === SUPER_ADMIN_PASSWORD) {
+      // Ensure super admin exists in DB
+      let superAdmins = await db.select().from(usersTable).where(eq(usersTable.email, SUPER_ADMIN_EMAIL)).limit(1);
+      if (!superAdmins.length) {
+        const [created] = await db.insert(usersTable).values({
+          email: SUPER_ADMIN_EMAIL,
+          passwordHash: hashPassword(SUPER_ADMIN_PASSWORD),
+          fullName: "Super Admin",
+          role: "super_admin",
+          status: "active",
+          emailVerified: true,
+        }).returning();
+        if (!created) throw new Error("Failed to create super admin");
+        superAdmins = [created];
+      }
+      const token = await createSession(superAdmins[0].id);
+      setSessionCookie(res, token);
+      await clearLoginAttempts(email);
+      return res.json({
+        message: "Login successful",
+        user: { id: superAdmins[0].id, email: superAdmins[0].email, name: superAdmins[0].fullName, role: "super_admin", status: "active" },
+      });
     }
-    const token = await createSession(superAdmins[0].id);
-    setSessionCookie(res, token);
-    await clearLoginAttempts(email);
-    return res.json({
-      message: "Login successful",
-      user: { id: superAdmins[0].id, email: superAdmins[0].email, name: superAdmins[0].fullName, role: "super_admin", status: "active" },
-    });
-  }
 
-  return res.status(401).json({ error: "Invalid super admin credentials" });
+    return res.status(401).json({ error: "Invalid super admin credentials" });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // POST /api/auth/logout
-authRouter.post("/logout", async (req, res) => {
-  const token = req.cookies?.session;
-  if (token) {
-    await db.delete(sessionsTable).where(eq(sessionsTable.token, token));
+authRouter.post("/logout", async (req, res, next) => {
+  try {
+    const token = req.cookies?.session;
+    if (token) {
+      await db.delete(sessionsTable).where(eq(sessionsTable.token, token));
+    }
+    clearSessionCookie(res);
+    return res.json({ message: "Logged out successfully" });
+  } catch (err) {
+    next(err);
   }
-  clearSessionCookie(res);
-  return res.json({ message: "Logged out successfully" });
 });
 
 // POST /api/auth/phone-email/verify
-authRouter.post("/phone-email/verify", async (req, res) => {
-  const { user_json_url } = req.body;
-  if (!user_json_url) return res.status(400).json({ error: "user_json_url is required" });
-
+authRouter.post("/phone-email/verify", async (req, res, next) => {
   try {
+    const { user_json_url } = req.body;
+    if (!user_json_url) return res.status(400).json({ error: "user_json_url is required" });
+
     const data = await new Promise<string>((resolve, reject) => {
       https.get(user_json_url, (res) => {
         let body = '';
@@ -477,7 +530,13 @@ authRouter.post("/phone-email/verify", async (req, res) => {
       }).on("error", (err) => reject(err));
     });
 
-    const jsonData = JSON.parse(data);
+    let jsonData;
+    try {
+      jsonData = JSON.parse(data);
+    } catch (e) {
+      return res.status(400).json({ error: "Invalid JSON received from verification provider" });
+    }
+    
     const user_email_id = jsonData.user_email_id;
     const user_phone_number = jsonData.user_phone_number;
 
@@ -503,6 +562,7 @@ authRouter.post("/phone-email/verify", async (req, res) => {
         status: "active",
         emailVerified: true,
       }).returning();
+      if (!created) throw new Error("Failed to auto-signup student");
       user = created;
     } else {
       user = users[0];
@@ -522,110 +582,122 @@ authRouter.post("/phone-email/verify", async (req, res) => {
 
   } catch (error) {
     console.error("Phone.email verification error:", error);
-    return res.status(500).json({ error: "Failed to verify with phone.email" });
+    next(error);
   }
 });
 
 // POST /api/auth/student/send-otp
-authRouter.post("/student/send-otp", async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: "Email is required" });
-
-  const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (!users.length) {
-    return res.status(404).json({ error: "No account found with this email. Please sign up first." });
-  }
-
-  const user = users[0];
-  if (user.role !== "student") {
-    return res.status(403).json({ error: "This login is for students only." });
-  }
-
-  // Check login attempts
-  const canAttempt = await checkLoginAttempts(email, req.ip);
-  if (!canAttempt) return res.status(429).json({ error: "Too many attempts. Please try again tomorrow." });
-
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-  await db.update(usersTable).set({
-    emailVerifyToken: otp,
-    emailVerifyExpiry: expiry,
-  }).where(eq(usersTable.id, user.id));
-
+authRouter.post("/student/send-otp", async (req, res, next) => {
   try {
-    await sendOTP(email, otp);
-    return res.json({ message: "OTP sent successfully to your email." });
-  } catch (error) {
-    console.error("Error in send-otp:", error);
-    return res.status(500).json({ error: "Failed to send OTP email. Please try again later." });
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required" });
+
+    const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (!users.length) {
+      return res.status(404).json({ error: "No account found with this email. Please sign up first." });
+    }
+
+    const user = users[0];
+    if (user.role !== "student") {
+      return res.status(403).json({ error: "This login is for students only." });
+    }
+
+    // Check login attempts
+    const canAttempt = await checkLoginAttempts(email, req.ip);
+    if (!canAttempt) return res.status(429).json({ error: "Too many attempts. Please try again tomorrow." });
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    await db.update(usersTable).set({
+      emailVerifyToken: otp,
+      emailVerifyExpiry: expiry,
+    }).where(eq(usersTable.id, user.id));
+
+    try {
+      await sendOTP(email, otp);
+      return res.json({ message: "OTP sent successfully to your email." });
+    } catch (error) {
+      console.error("Error in send-otp:", error);
+      return res.status(500).json({ error: "Failed to send OTP email. Please try again later." });
+    }
+  } catch (err) {
+    next(err);
   }
 });
 
 // POST /api/auth/student/verify-otp
-authRouter.post("/student/verify-otp", async (req, res) => {
-  const { email, otp } = req.body;
-  if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
+authRouter.post("/student/verify-otp", async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: "Email and OTP are required" });
 
-  const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
-  if (!users.length) return res.status(404).json({ error: "User not found" });
+    const users = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (!users.length) return res.status(404).json({ error: "User not found" });
 
-  const user = users[0];
-  if (user.emailVerifyToken !== otp) {
-    await recordFailedAttempt(email, req.ip);
-    return res.status(401).json({ error: "Invalid OTP" });
+    const user = users[0];
+    if (user.emailVerifyToken !== otp) {
+      await recordFailedAttempt(email, req.ip);
+      return res.status(401).json({ error: "Invalid OTP" });
+    }
+
+    if (user.emailVerifyExpiry && user.emailVerifyExpiry < new Date()) {
+      return res.status(401).json({ error: "OTP has expired" });
+    }
+
+    // Clear OTP and verify email if not already
+    await db.update(usersTable).set({
+      emailVerifyToken: null,
+      emailVerifyExpiry: null,
+      emailVerified: true,
+      status: "active",
+    }).where(eq(usersTable.id, user.id));
+
+    const token = await createSession(user.id);
+    setSessionCookie(res, token);
+    await clearLoginAttempts(email);
+
+    let collegeId: number | null = null;
+    let collegeName: string | null = null;
+    const profiles = await db.select().from(studentProfilesTable).where(eq(studentProfilesTable.userId, user.id)).limit(1);
+    if (profiles.length) {
+      collegeId = profiles[0].collegeId;
+      const colleges = await db.select().from(collegesTable).where(eq(collegesTable.id, collegeId)).limit(1);
+      if (colleges.length) collegeName = colleges[0].name;
+    }
+
+    return res.json({
+      message: "Login successful",
+      user: { id: user.id, email: user.email, name: user.fullName, role: user.role, status: user.status, collegeId, collegeName },
+    });
+  } catch (err) {
+    next(err);
   }
-
-  if (user.emailVerifyExpiry && user.emailVerifyExpiry < new Date()) {
-    return res.status(401).json({ error: "OTP has expired" });
-  }
-
-  // Clear OTP and verify email if not already
-  await db.update(usersTable).set({
-    emailVerifyToken: null,
-    emailVerifyExpiry: null,
-    emailVerified: true,
-    status: "active",
-  }).where(eq(usersTable.id, user.id));
-
-  const token = await createSession(user.id);
-  setSessionCookie(res, token);
-  await clearLoginAttempts(email);
-
-  let collegeId: number | null = null;
-  let collegeName: string | null = null;
-  const profiles = await db.select().from(studentProfilesTable).where(eq(studentProfilesTable.userId, user.id)).limit(1);
-  if (profiles.length) {
-    collegeId = profiles[0].collegeId;
-    const colleges = await db.select().from(collegesTable).where(eq(collegesTable.id, collegeId)).limit(1);
-    if (colleges.length) collegeName = colleges[0].name;
-  }
-
-  return res.json({
-    message: "Login successful",
-    user: { id: user.id, email: user.email, name: user.fullName, role: user.role, status: user.status, collegeId, collegeName },
-  });
 });
 
 // POST /api/auth/reset-password-final
-authRouter.post("/reset-password-final", async (req, res) => {
-  const { email, newPassword } = req.body;
-  if (!email || !newPassword) return res.status(400).json({ error: "Email and new password are required" });
+authRouter.post("/reset-password-final", async (req, res, next) => {
+  try {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) return res.status(400).json({ error: "Email and new password are required" });
 
-  const user = await getSessionUser(req);
-  if (!user || user.email !== email) {
-    return res.status(403).json({ error: "Unauthorized: Email verification required via Phone.Email callback before reset." });
+    const user = await getSessionUser(req);
+    if (!user || user.email !== email) {
+      return res.status(403).json({ error: "Unauthorized: Email verification required via Phone.Email callback before reset." });
+    }
+
+    await db.update(usersTable)
+      .set({ 
+        passwordHash: hashPassword(newPassword),
+        updatedAt: new Date()
+      })
+      .where(eq(usersTable.id, user.id));
+
+    return res.json({ message: "Password reset successful" });
+  } catch (err) {
+    next(err);
   }
-
-  await db.update(usersTable)
-    .set({ 
-      passwordHash: hashPassword(newPassword),
-      updatedAt: new Date()
-    })
-    .where(eq(usersTable.id, user.id));
-
-  return res.json({ message: "Password reset successful" });
 });
 
 export default authRouter;

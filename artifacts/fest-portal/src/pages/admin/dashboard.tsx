@@ -208,15 +208,29 @@ function EventFormDialog({ isOpen, onClose, event, events }: { isOpen: boolean, 
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // Format dates for inputs
+  // Format dates for inputs — only pass form-relevant fields to avoid polluting form state
   const defaultVals = event ? {
-    ...event,
+    title: event.title,
+    description: event.description,
+    category: event.category,
+    venue: event.venue,
     eventDate: new Date(event.eventDate).toISOString().slice(0, 16),
     registrationDeadline: new Date(event.registrationDeadline).toISOString().slice(0, 16),
-    maxParticipants: event.maxParticipants || undefined,
-    parentEventId: event.parentEventId || undefined,
-    previousEventId: event.previousEventId || undefined,
-  } : {};
+    maxParticipants: event.maxParticipants ?? undefined,
+    // Convert numbers to strings so HTML <select> value comparison works correctly
+    parentEventId: event.parentEventId ? event.parentEventId : undefined,
+    previousEventId: event.previousEventId ? event.previousEventId : undefined,
+  } : {
+    title: "",
+    description: "",
+    category: "",
+    venue: "",
+    eventDate: "",
+    registrationDeadline: "",
+    maxParticipants: undefined,
+    parentEventId: undefined,
+    previousEventId: undefined,
+  };
 
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
 
@@ -263,10 +277,16 @@ function EventFormDialog({ isOpen, onClose, event, events }: { isOpen: boolean, 
     }
   };
 
+  const handleClose = () => {
+    setThumbnailFile(null);
+    reset();
+    onClose();
+  };
+
   const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={event ? "Edit Event" : "Create New Event"}>
+    <Dialog isOpen={isOpen} onClose={handleClose} title={event ? "Edit Event" : "Create New Event"}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <Input label="Event Title" {...register("title")} error={errors.title?.message} />
         
@@ -291,7 +311,12 @@ function EventFormDialog({ isOpen, onClose, event, events }: { isOpen: boolean, 
           <Input label="Max Participants (Optional)" type="number" {...register("maxParticipants")} error={errors.maxParticipants?.message} />
           <Select 
             label="Parent Event (Optional)" 
-            options={[{value: "", label: "None"}, ...events.filter(e => e.id !== event?.id && !e.parentEventId).map(e => ({ value: e.id, label: e.title }))]} 
+            options={[
+              {value: "", label: "None"},
+              ...events
+                .filter(e => e.id !== event?.id && !e.parentEventId)
+                .map(e => ({ value: String(e.id), label: e.title }))
+            ]} 
             {...register("parentEventId")} 
             error={errors.parentEventId?.message} 
           />
@@ -299,7 +324,12 @@ function EventFormDialog({ isOpen, onClose, event, events }: { isOpen: boolean, 
         <div className="grid grid-cols-1 mb-5">
           <Select 
             label="Previous/Recurring Event (Optional)" 
-            options={[{value: "", label: "None"}, ...events.filter(e => e.id !== event?.id && e.eventStatus === 'completed').map(e => ({ value: e.id, label: e.title }))]} 
+            options={[
+              {value: "", label: "None"},
+              ...events
+                .filter(e => e.id !== event?.id && e.eventStatus === 'completed')
+                .map(e => ({ value: String(e.id), label: e.title }))
+            ]} 
             {...register("previousEventId")} 
             error={errors.previousEventId?.message} 
           />
@@ -315,7 +345,7 @@ function EventFormDialog({ isOpen, onClose, event, events }: { isOpen: boolean, 
         </div>
         
         <div className="flex justify-end gap-3 pt-6 mt-4">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="ghost" onClick={handleClose}>Cancel</Button>
           <Button type="submit" isLoading={isPending}>{event ? "Save Changes" : "Create Event"}</Button>
         </div>
       </form>

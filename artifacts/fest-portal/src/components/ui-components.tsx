@@ -97,9 +97,8 @@ export const Select = React.forwardRef<
         )}
         {...props}
       >
-        <option value="" disabled>Select an option</option>
         {options.map(opt => (
-          <option key={opt.value} value={opt.value} className="bg-card text-foreground">{opt.label}</option>
+          <option key={String(opt.value)} value={String(opt.value)} className="bg-card text-foreground">{opt.label}</option>
         ))}
       </select>
       {error && <p className="text-xs text-destructive mt-1">{error}</p>}

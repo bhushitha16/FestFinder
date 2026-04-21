@@ -22,4 +22,10 @@ console.log("Mounting /api routes...");
 app.use("/api", router);
 console.log("Routes mounted.");
 
+// Global error handler
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal Server Error" });
+});
+
 export default app;
