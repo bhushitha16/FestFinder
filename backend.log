@@ -1,0 +1,8 @@
+nohup: ignoring input
+
+> @workspace/api-server@0.0.0 dev /home/surya/repos/FestFinder/artifacts/api-server
+> NODE_ENV=development tsx ./src/index.ts
+
+DATABASE_URL: postgresql://neondb_owner:npg_F4AOjYuce7Ry@ep-red-bar-a1xd86fj-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+Server starting...
+Server listening on port 5000
